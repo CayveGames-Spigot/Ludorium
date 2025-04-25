@@ -1,0 +1,5 @@
+# THIS PLUGIN IS EQUIPPED WITH HEX COLOR CODE CONVERSION
+# Feel free to use custom colors in the Text.yml file
+# Use "#FFFFFFThis is text" for normal conversion
+# Use "<gradient #FFFFFF #000000>This is gradient text</gradient>" for gradient text
+# Use "<rainbow>This is rainbow text</rainbow>" for rainbow text

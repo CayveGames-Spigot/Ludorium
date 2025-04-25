@@ -1,0 +1,47 @@
+package me.cayve.ludorium.commands;
+
+import java.util.ArrayList;
+
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import me.cayve.ludorium.main.LudoriumPlugin;
+import me.cayve.ludorium.ymls.TextYml;
+
+public class LudoriumCommand {
+	
+	private static ArrayList<GameCommand> registeredGames;
+	
+	public static void registerGame(GameCommand gameCommand) {
+		if (registeredGames == null)
+			registeredGames = new ArrayList<GameCommand>();
+		
+		registeredGames.add(gameCommand);
+	}
+	
+	public static void uninitialize() {
+		registeredGames = null;
+	}
+	
+	public static LiteralCommandNode<CommandSourceStack> build() {
+		LiteralArgumentBuilder<CommandSourceStack> root = LiteralArgumentBuilder.<CommandSourceStack>literal("ludorium")
+			.then(LiteralArgumentBuilder.<CommandSourceStack>literal("reload")
+					.requires(sender -> sender.getSender().hasPermission("ludorium.admin") || sender.getSender().isOp())
+					.executes(ctx -> {
+						LudoriumPlugin.getPlugin().reloadPlugin();
+						ctx.getSource().getSender().sendMessage(TextYml.getText("commands.reload"));
+						return 1;
+					}))
+			.then(LiteralArgumentBuilder.<CommandSourceStack>literal("leave")
+					.executes(ctx -> {
+						//Leave wizard / game
+						return 1;
+					}));
+		
+		for (GameCommand gameCommand : registeredGames)
+			root.then(gameCommand.build());
+		
+		return root.build();
+	}
+}

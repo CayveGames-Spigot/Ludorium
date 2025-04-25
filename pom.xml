@@ -1,0 +1,66 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>me.cayve.ludorium</groupId>
+  <artifactId>ludorium</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+
+  <build>
+	<resources>
+    	<resource>
+       	 	<directory>src/me/cayve/ludorium/main/resources</directory>
+        	<filtering>false</filtering>
+    	</resource>
+	</resources>
+    <sourceDirectory>src</sourceDirectory>
+    <plugins>
+      <!-- Compiler Plugin -->
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.10.1</version>
+        <configuration>
+          <release>21</release>
+          <target>21</target>
+        </configuration>
+      </plugin>
+
+      <plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-antrun-plugin</artifactId>
+    <version>3.1.0</version>
+    <executions>
+        <execution>
+            <phase>package</phase>
+            <goals><goal>run</goal></goals>
+            <configuration>
+                <target>
+                    <copy file="${project.build.directory}/${project.build.finalName}.jar"
+                          tofile="C:/Users/cayma/Downloads/Ludorium Server/plugins/${project.artifactId}.jar"
+                          overwrite="true" />
+                </target>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+
+    </plugins>
+  </build>
+
+  <dependencies>
+    <dependency>
+        <groupId>io.papermc.paper</groupId>
+        <artifactId>paper-api</artifactId>
+        <version>1.21.5-R0.1-SNAPSHOT</version>
+        <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+  	<repository>
+		<id>papermc</id>
+    	<url>https://repo.papermc.io/repository/maven-public/</url>
+    </repository>
+  </repositories>
+</project>
