@@ -16,6 +16,8 @@ import me.cayve.ludorium.utils.entities.LudoriumEntity;
 
 public class LudoriumPlugin extends JavaPlugin {
 
+	private static boolean DEVELOPER_MODE = true;
+	
 	private static LudoriumPlugin main;
 	
 	public static void registerEvent(Listener listener) {
@@ -24,7 +26,13 @@ public class LudoriumPlugin extends JavaPlugin {
 	
 	public static LudoriumPlugin getPlugin() { return main; }
 	
-	public static void debug(String debugMessage) { main.getServer().getLogger().log(Level.INFO, debugMessage); }
+	public static void debug(String debugMessage) 
+	{ 
+		if (isDeveloperMode())
+			main.getServer().getLogger().log(Level.INFO, debugMessage); 
+	}
+	
+	public static boolean isDeveloperMode() { return DEVELOPER_MODE; }
 	
 	@Override
 	public void onLoad() {

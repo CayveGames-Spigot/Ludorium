@@ -36,7 +36,7 @@ public class Grid2D<T> {
 	 * Runs an action at each coordinate (even if its null)
 	 * @param action
 	 */
-	public void forEach(BiConsumer<Integer, Integer> action) {
+	public void forEachIndex(BiConsumer<Integer, Integer> action) {
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				action.accept(x, y);
@@ -49,7 +49,7 @@ public class Grid2D<T> {
 	 * @param action
 	 */
 	public void forEach(Consumer<T> action) {
-		forEach((x, y) -> {
+		forEachIndex((x, y) -> {
 			T element = get(x, y);
 			
 			if (element != null)
@@ -66,7 +66,7 @@ public class Grid2D<T> {
 	 */
 	public <R> Grid2D<R> map(Class<R> type, Function<T, R> mapMethod) {
 		Grid2D<R> newGrid = new Grid2D<R>(type, width, height);
-		forEach((x, y) -> newGrid.set(x, y, mapMethod.apply(get(x, y))));
+		forEachIndex((x, y) -> newGrid.set(x, y, mapMethod.apply(get(x, y))));
 		return newGrid;
 	}
 	

@@ -17,8 +17,10 @@ me\cayve\ludorium\games\RegionTriggerManager$RegionTriggerListener.class
 me\cayve\ludorium\commands\LudoCommand.class
 me\cayve\ludorium\utils\HexColors.class
 me\cayve\ludorium\games\wizards\LudoCreationWizard.class
+me\cayve\ludorium\utils\animations\patterns\ArrayAnimations.class
 me\cayve\ludorium\ymls\TextYml.class
 me\cayve\ludorium\actions\PlayerAction.class
+me\cayve\ludorium\utils\ArrayUtils.class
 me\cayve\ludorium\utils\locational\Grid3D.class
 me\cayve\ludorium\games\lobbies\GameLobby.class
 me\cayve\ludorium\games\lobbies\RegionLobby.class
@@ -32,6 +34,7 @@ me\cayve\ludorium\utils\eDirection.class
 me\cayve\ludorium\games\boards\GridBoard.class
 me\cayve\ludorium\commands\GameCommand.class
 me\cayve\ludorium\utils\Timer$Task.class
+me\cayve\ludorium\utils\StateMachine.class
 me\cayve\ludorium\actions\CrouchAction$eResult.class
 me\cayve\ludorium\utils\ToolbarMessage.class
 me\cayve\ludorium\utils\locational\Vector2D.class
@@ -46,6 +49,7 @@ me\cayve\ludorium\utils\entities\BlockEntity.class
 me\cayve\ludorium\utils\Timer$1.class
 me\cayve\ludorium\games\GameBase.class
 me\cayve\ludorium\utils\animations\Animator.class
+me\cayve\ludorium\utils\StateMachine$State.class
 me\cayve\ludorium\utils\locational\Region.class
 me\cayve\ludorium\utils\entities\DisplayEntity.class
 me\cayve\ludorium\ymls\YmlFiles$YmlFileInfo.class

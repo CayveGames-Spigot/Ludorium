@@ -19,13 +19,13 @@ public class LudoCommand extends GameCommand {
 	{ 
 		root.then(LiteralArgumentBuilder.<CommandSourceStack>literal("manual")
 				.executes(ctx -> {
-					((LudoCreationWizard)createWizard(ctx)).setManualMode(true).activateWizard();
+					((LudoCreationWizard)createWizard(ctx)).setManualMode().activateWizard();
 					return 1;
 				}));
 		
 		root.then(LiteralArgumentBuilder.<CommandSourceStack>literal("6-player")
 				.executes(ctx -> {
-					((LudoCreationWizard)createWizard(ctx)).setSixPlayer(true).setManualMode(true).activateWizard();
+					((LudoCreationWizard)createWizard(ctx)).setSixPlayer().setManualMode().activateWizard();
 					return 1;
 				}));
 	}

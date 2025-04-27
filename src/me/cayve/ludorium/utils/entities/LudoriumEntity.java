@@ -86,6 +86,12 @@ public class LudoriumEntity implements Listener {
 		//If the list contains the tagged entity thats being removed, that means .remove() was used elsewhere
 		//You could certainly handle the issue here, but the exception serves as a notice of incorrect usage
 		if (event.getEntity().getPersistentDataContainer().has(pluginKey) && entities.contains(event.getEntity())) 
-			throw new LudoriumException("Entity not removed properly.");
+		{
+			//If we're in developer mode, throw an exception
+			if (LudoriumPlugin.isDeveloperMode())
+				throw new LudoriumException("Entity not removed properly.");
+			else //Otherwise just handle it
+				remove(event.getEntity());
+		}
 	}
 }

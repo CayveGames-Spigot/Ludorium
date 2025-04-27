@@ -16,9 +16,12 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
 import me.cayve.ludorium.actions.CrouchAction.eResult;
+import me.cayve.ludorium.utils.ArrayUtils;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
+import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.SinWaveAnimation;
+import me.cayve.ludorium.utils.animations.patterns.ArrayAnimations;
 import me.cayve.ludorium.utils.entities.BlockEntity;
 import me.cayve.ludorium.utils.entities.DisplayEntity;
 import me.cayve.ludorium.ymls.TextYml;
@@ -31,6 +34,9 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 	private CrouchAction submitAction;
 	private int blockCount;
 	private boolean allowSame;
+	
+	private boolean animateSelection = true;
+	private boolean animateCompletion = true;
 	
 	//Constructor for selecting multiple blocks
 	public SelectBlocksAction(Player player, int blockCount, boolean allowSame, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
@@ -86,20 +92,46 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 			selectCallback.accept(event.getClickedBlock());
 		
 		if (selectedBlocks.size() == blockCount)
-			publishEvent();
+			animateAndPublish();
+	}
+	
+	public void setAnimationStates(boolean animateSelection, boolean animateCompletion) {
+		this.animateSelection = animateSelection;
+		this.animateCompletion = animateCompletion;
 	}
 	
 	private void selectAnimation(Block block) {
+		if (!animateSelection) return;
+		
 		BlockEntity newAnimation = new BlockEntity(block.getLocation(), block.getBlockData());
 		
 		activeAnimations.add(newAnimation);
 		
 		newAnimation.registerOnAnimatorComplete((entity) -> {
-			entity.destroy();
-			activeAnimations.remove(entity);
+			entity.remove();
 		});
 		
 		newAnimation.getAnimator().setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
+	}
+	
+	private void animateAndPublish() {
+		//If selection animation is enabled and there were less than 2 blocks selected, ignore the animation
+		//since the blocks have already been animated
+		if ((animateSelection && selectedBlocks.size() <= 2) || !animateCompletion) 
+			publishEvent();
+		
+		//Calculates an arbitrary "weight" for how many blocks were selected
+		//40 represents the upper bound of blocks
+		float weight = Math.clamp(selectedBlocks.size() / 40, 0, 1);
+		
+		float duration = 1 + (4 * weight);
+		float overlap = 0.3f + (0.45f * (1 - weight));
+
+		ArrayAnimations.wave(tsk, 
+				ArrayUtils.map(ArrayUtils.toArray(activeAnimations, DisplayEntity.class), Animator.class, (entity) -> entity.getAnimator()), 
+				duration, overlap, .3f, .1f);
+		
+		delayedPublish(duration);
 	}
 	
 	//Player crouched to submit
@@ -107,7 +139,7 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		if (selectedBlocks.size() == 0)
 			cancelEvent();
 		else
-			publishEvent();
+			animateAndPublish();
 	}
 	
 	//Player crouched to cancel

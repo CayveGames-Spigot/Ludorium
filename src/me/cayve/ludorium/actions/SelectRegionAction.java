@@ -28,6 +28,9 @@ public class SelectRegionAction extends PlayerAction {
 	private Grid2D<BlockEntity> animationGrid;
 	private final float ANIMATION_DURATION = 2;
 	
+	private boolean animateSelection = true;
+	private boolean animateCompletion = true;
+	
 	@Override
 	public void destroy() 
 	{
@@ -47,6 +50,14 @@ public class SelectRegionAction extends PlayerAction {
 		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText("actions.region.selectFirst").replace("<name>", regionName)
 				.replace("<progress>", ProgressBar.generate(0, 2))).setPermanent();
 		selectBlocksAction = new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCancelledAction).registerSelectEvent(this::onBlockSelected);
+		selectBlocksAction.setAnimationStates(animateSelection, false);
+	}
+	
+	public void setAnimationStates(boolean animateSelection, boolean animateCompletion) {
+		this.animateSelection = animateSelection;
+		this.animateCompletion = animateCompletion;
+		
+		selectBlocksAction.setAnimationStates(animateSelection, false);
 	}
 	
 	private void onBlockSelected(Block block) 
@@ -62,12 +73,14 @@ public class SelectRegionAction extends PlayerAction {
 		ArrayList<Block> selectedBlocks = selectBlocksAction.getBlocks();
 		region = new Region(selectedBlocks.get(0).getLocation(), selectedBlocks.get(1).getLocation());
 		
-		animateSelection();
+		animateCompletion();
 		
 		delayedPublish(ANIMATION_DURATION); //Wait for animation to finish
 	}
 	
-	protected void animateSelection() {
+	protected void animateCompletion() {
+		if (!animateCompletion) return;
+		
 		animationGrid = region.generate2DDisplayGrid();
 
 		GridAnimations.wave(tsk, 

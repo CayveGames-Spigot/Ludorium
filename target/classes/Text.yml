@@ -10,20 +10,19 @@ commands:
 wizards:
   started: 'Started the creation wizard'
   canceled: 'Creation wizard has been canceled'
-  created: 'Game instance has been created successfully!'
+  completed: 'Game instance has been created successfully!'
   ludo:
     attemptingAutomatic: 'Automatic mode will attempt to identify the board in a given region'
     identifiedBoard: 'Board identified! Please watch the following animation to confirm.'
     noBoardIdentified: 'Could not identify board. Please use manual mode to define board. Quitting wizard..'
     colorVerification: 'Verify board colors go in clockwise order of: <colors>'
-    selectTiles: 'Going clockwise, please select all tiles starting at the red out'
-    selectHome: 'Starting with red and going clockwise, select each color’s home tiles in order'
-    starters: 'Next, you will select the starting regions for each color. (Where the pieces start)'
+    selectTiles: 'Going clockwise, please select all tiles starting at the <color> out'
+    selectHome: 'In order, select the <color> home tiles'
 
     # This will be appended to the actions.region prompts
     selectStarter: '<color> starter' 
-    diagonals: 'Lastly, you will select each pair of diagonals on the board. Cancel selection if not applicable.'
-    selectDiagonalPair: 'Select any single diagonal pair (the two blocks that act as diagonals on the board) <progress>'
+    diagonals: 'Lastly, you will select diagonal pairs. Cancel if not applicable.'
+    selectDiagonalPair: 'Select any single diagonal pair <progress>'
 actions:
   selectBlocks:
     sameBlock: 'You are not allowed to select a block you have already selected!'
@@ -38,9 +37,9 @@ actions:
     skip: '&cSkip&r..'
 words:
   colors:
-    red: 'Red'
-    yellow: 'Yellow'
-    green: 'Green'
-    blue: 'Blue'
-    purple: 'Purple'
-    black: 'Black'
+    red: '&cRed&r'
+    yellow: '&eYellow&r'
+    green: '&aGreen&r'
+    blue: '&9Blue&r'
+    purple: '&5Purple&r'
+    black: '&0Black&r'

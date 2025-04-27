@@ -11,6 +11,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import me.cayve.ludorium.actions.PlayerAction;
 import me.cayve.ludorium.main.LudoriumPlugin;
+import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
@@ -21,8 +22,8 @@ public abstract class GameCreationWizard implements Listener {
 	
 	private static ArrayList<GameCreationWizard> activeWizards = new ArrayList<GameCreationWizard>();
 	
-	protected int state = -1;
-	protected boolean progressed = true;
+	protected StateMachine stateMachine;
+	
 	protected PlayerAction currentAction;
 	protected Player player;
 	protected String instanceName;
@@ -37,6 +38,8 @@ public abstract class GameCreationWizard implements Listener {
 		activeWizards.add(this);
 		
 		LudoriumPlugin.registerEvent(this);
+		
+		stateMachine = new StateMachine();
 	}
 	
 	/**
@@ -47,7 +50,7 @@ public abstract class GameCreationWizard implements Listener {
 	 * @return self, to allow for argument chaining
 	 */
 	public GameCreationWizard apply(String instanceName, Player wizard) {
-		if (state != -1) return this;
+		if (stateMachine.hasStarted()) return this;
 		
 		this.player = wizard;
 		this.instanceName = instanceName;
@@ -83,7 +86,9 @@ public abstract class GameCreationWizard implements Listener {
 		Timer.cancelAllWithKey(tsk);
 		ToolbarMessage.clearAllFromSource(tsk);
 		ToolbarMessage.clearAllFromSource(stateTsk);
-		currentAction.destroy();
+		
+		if (currentAction != null)
+			currentAction.destroy();
 		
 		HandlerList.unregisterAll(this);
 	}
@@ -98,16 +103,16 @@ public abstract class GameCreationWizard implements Listener {
 	
 	//Activate after initialization to allow for custom arguments in children
 	public void activateWizard() {
-		if (state != -1 || player == null) return;
+		if (stateMachine.hasStarted() || player == null) return;
 		
 		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText("wizards.started")).setType(eType.SUCCESS).setDuration(2).clearIfSkipped();
 		
-		skipToState(0);
+		stateMachine.next();
 	}
 	
 	//Callback for wizard action
 	protected void onCompletedAction(PlayerAction action) {
-		if (state == -1) return;
+		if (!stateMachine.hasStarted()) return;
 		
 		//If there should be a delay, start the timer
 		if (onCompleteDelay != null && onCompleteDelay.isPaused()) {
@@ -120,14 +125,17 @@ public abstract class GameCreationWizard implements Listener {
 		onCompleteDelay = null;
 		delayedAction = null;
 		
-		skipToState(state + 1);
+		stateMachine.next();
 	}
 	
 	//Callback for wizard action
-	protected void onCancelledAction(PlayerAction action) {
-		if (state == -1) return;
+	protected void onCanceledAction(PlayerAction action) {
+		if (!stateMachine.hasStarted()) return;
 		
-		skipToState(state - 1);
+		stateMachine.previous();
+		
+		if (stateMachine.getStateIndex() < 0)
+			cancelWizard();
 	}
 	
 	/**
@@ -142,21 +150,6 @@ public abstract class GameCreationWizard implements Listener {
 		Timer.register(onCompleteDelay);
 	}
 	
-	//Using this can screw up progression/regression. ONLY USE IF YOUR PROGRESSION IS DESIGNED TO
-	protected void skipToState(int state) {
-		progressed = this.state < state;
-		this.state = state;
-		
-		if (state < 0)
-			cancelWizard();
-		else
-			onStateUpdate();
-	}
-	
-	//This is where the custom wizard logic is kept
-	protected abstract void onStateUpdate();
-	
-	
 	//Quit the wizard if the player leaves
 	@EventHandler
 	private void onPlayerLeave(PlayerQuitEvent event) {
@@ -164,8 +157,16 @@ public abstract class GameCreationWizard implements Listener {
 			cancelWizard();
 	}
 	
-	private void cancelWizard() {
-		ToolbarMessage.sendImmediate(player, TextYml.getText("wizards.canceled")).setType(eType.ERROR);
+	protected void cancelWizard(String customMessage) {
+		ToolbarMessage.sendImmediate(player, customMessage).setType(eType.ERROR);
+		destroy();
+	}
+	protected void cancelWizard() {
+		cancelWizard(TextYml.getText("wizards.canceled"));
+	}
+	
+	protected void completeWizard() {
+		ToolbarMessage.sendImmediate(player, TextYml.getText("wizards.completed")).setType(eType.SUCCESS);
 		destroy();
 	}
 }

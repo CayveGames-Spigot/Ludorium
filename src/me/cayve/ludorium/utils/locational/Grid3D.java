@@ -38,7 +38,7 @@ public class Grid3D<T> {
 	 * Runs an action at each coordinate (even if its null)
 	 * @param action
 	 */
-	public void forEach(TriConsumer<Integer, Integer, Integer> action) {
+	public void forEachIndex(TriConsumer<Integer, Integer, Integer> action) {
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				for (int z = 0; z < depth; z++) {
@@ -53,7 +53,7 @@ public class Grid3D<T> {
 	 * @param action
 	 */
 	public void forEach(Consumer<T> action) {
-		forEach((x, y, z) -> {
+		forEachIndex((x, y, z) -> {
 			T element = get(x, y, z);
 			
 			if (element != null)
@@ -70,7 +70,7 @@ public class Grid3D<T> {
 	 */
 	public <R> Grid3D<R> map(Class<R> type, Function<T, R> mapMethod) {
 		Grid3D<R> newGrid = new Grid3D<R>(type, width, height, depth);
-		forEach((x, y, z) -> newGrid.set(x, y, z, mapMethod.apply(get(x, y, z))));
+		forEachIndex((x, y, z) -> newGrid.set(x, y, z, mapMethod.apply(get(x, y, z))));
 		return newGrid;
 	}
 	
