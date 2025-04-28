@@ -30,6 +30,7 @@ actions:
     selectFirst: 'Please select the FIRST corner of the region: <name> <progress>'
     selectSecond: 'Please select the SECOND corner of the region: <name> <progress>'
   crouch:
+    hold: 'Hold crouch to <context>'
     confirm: '&aConfirm&r..'
     confirmed: '&a&lConfirmed&r!'
     cancel: '&cCancel&r..'

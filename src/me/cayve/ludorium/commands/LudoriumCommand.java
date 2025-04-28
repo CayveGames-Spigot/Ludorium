@@ -2,6 +2,9 @@ package me.cayve.ludorium.commands;
 
 import java.util.ArrayList;
 
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 
@@ -29,8 +32,11 @@ public class LudoriumCommand {
 			.then(LiteralArgumentBuilder.<CommandSourceStack>literal("reload")
 					.requires(sender -> sender.getSender().hasPermission("ludorium.admin") || sender.getSender().isOp())
 					.executes(ctx -> {
+						CommandSender sender = ctx.getSource().getSender();
+						
 						LudoriumPlugin.getPlugin().reloadPlugin();
-						ctx.getSource().getSender().sendMessage(TextYml.getText("commands.reload"));
+						sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
+								"commands.reload"));
 						return 1;
 					}))
 			.then(LiteralArgumentBuilder.<CommandSourceStack>literal("leave")

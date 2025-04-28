@@ -23,11 +23,22 @@ public class YmlFiles {
 			this.customConfig = customConfig;
 		}
 	}
+	
+	public static boolean exists(String fileName) {
+		try {
+			File file = new File(LudoriumPlugin.getPlugin().getDataFolder(), fileName);
+			return file.exists();
+		} catch (Exception e) 
+		{
+			return false;
+		}
+	}
 
 	public static YmlFileInfo reload(String fileName) {
 		YmlFileInfo info = null;
 		try {
 			File textFile = new File(LudoriumPlugin.getPlugin().getDataFolder(), fileName);
+			textFile.getParentFile().mkdirs();
 			FileConfiguration customConfig = YamlConfiguration.loadConfiguration(textFile);
 			info = new YmlFileInfo(textFile, customConfig);
 			Reader defConfigStream = new InputStreamReader(LudoriumPlugin.getPlugin().getResource(fileName),

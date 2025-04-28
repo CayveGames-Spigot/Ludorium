@@ -12,6 +12,7 @@ import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
 import me.cayve.ludorium.ymls.TextYml;
+import net.md_5.bungee.api.ChatColor;
 
 public class LudoCreationWizard extends GameCreationWizard {
 
@@ -52,16 +53,21 @@ public class LudoCreationWizard extends GameCreationWizard {
 	}
 	
 	private void promptColorOrderVerification() {
-		ToolbarMessage.sendQueue(player, tsk, TextYml.getText("wizards.ludo.colorVerification")
+		ToolbarMessage.sendQueue(player, tsk, TextYml.getText(player, "wizards.ludo.colorVerification")
 				.replace("<colors>", String.format("%s->%s->%s->%s" + (isSixPlayer ? "->%s->%s" : ""),
-						TextYml.getText("words.colors." + colorOrder[0]),
-						TextYml.getText("words.colors." + colorOrder[1]),
-						TextYml.getText("words.colors." + colorOrder[2]),
-						TextYml.getText("words.colors." + colorOrder[3]),
-						TextYml.getText("words.colors." + colorOrder[4]),
-						TextYml.getText("words.colors." + colorOrder[5])).toUpperCase())
+						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[0]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[1]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[2]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[3]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[4]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[5]), "■"))
+							.toUpperCase())
 				//Replaces color with the ordered RED->YELLOW->GREEN->BLUE and adds the last two if six players
 				).setDuration(12).showDuration().clearIfSkipped();
+	}
+	
+	private String replaceAllButColor(String original, String replaceWith) {
+		return original.replace(ChatColor.stripColor(original), replaceWith);
 	}
 	
 	private void createAutomaticStates() {
@@ -69,24 +75,24 @@ public class LudoCreationWizard extends GameCreationWizard {
 				.newState()
 					.registerProgress(this::promptColorOrderVerification)
 					.registerAction(() -> {
-						ToolbarMessage.sendQueue(player, stateTsk, TextYml.getText("wizards.ludo.attemptingAutomatic"));
+						ToolbarMessage.sendQueue(player, stateTsk, TextYml.getText(player, "wizards.ludo.attemptingAutomatic"));
 						
 						setNewAction(new SelectRegionAction(player, "Ludo Board", this::onCompletedAction, this::onCanceledAction));
 					}).registerComplete(() -> {
 						board = LudoBoard.identifyBoard(((SelectRegionAction)currentAction).getRegion(), isSixPlayer);
 							
 						if (board == null)
-							cancelWizard(TextYml.getText("wizards.ludo.noBoardIdentified"));
+							cancelWizard(TextYml.getText(player, "wizards.ludo.noBoardIdentified"));
 					}).buildState()
 				.newState()
 					.registerAction(() -> {
-						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText("wizards.ludo.identifiedBoard")).setPermanent();
+						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.identifiedBoard")).setPermanent();
 						board.animate();
 						
 						setNewAction(new CrouchAction(player, eResult.BOTH, this::onCompletedAction, this::onCanceledAction));
 					})
 					.registerComplete(() -> {
-						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText("wizards.created")).setType(eType.SUCCESS);
+						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.created")).setType(eType.SUCCESS);
 						
 						createGame();
 					})
@@ -105,8 +111,8 @@ public class LudoCreationWizard extends GameCreationWizard {
 			.newState()
 				.registerProgress(this::promptColorOrderVerification)
 				.registerAction(() -> { //Started manual mode
-					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText("wizards.ludo.selectTiles")
-							.replace("<color>", TextYml.getText("words.colors." + colorOrder[0]).toUpperCase())).setPermanent();
+					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectTiles")
+							.replace("<color>", TextYml.getText(player, "words.colors." + colorOrder[0]).toUpperCase())).setPermanent();
 					
 					setNewAction(new SelectBlocksAction(player, -1, false, this::onCompletedAction, this::onCanceledAction));
 				})
@@ -121,9 +127,9 @@ public class LudoCreationWizard extends GameCreationWizard {
 			 */
 			.newState("HOME SELECTION")
 				.registerAction(() -> {
-					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText("wizards.ludo.selectHome")
+					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectHome")
 							.replace("<color>", 
-									TextYml.getText("words.colors." + colorOrder[stateMachine.contextualIndex("homeColor")]).toUpperCase()))
+									TextYml.getText(player, "words.colors." + colorOrder[stateMachine.contextualIndex("homeColor")]).toUpperCase()))
 							.setPermanent();
 					 
 					setNewAction(new SelectBlocksAction(player, homeTileCount, false, this::onCompletedAction, this::onCanceledAction));
@@ -154,9 +160,9 @@ public class LudoCreationWizard extends GameCreationWizard {
 				})
 				.registerAction(() -> {
 					setNewAction(new SelectRegionAction(player, 
-							TextYml.getText("wizards.ludo.selectStarter")
+							TextYml.getText(player, "wizards.ludo.selectStarter")
 								.replace("<color>", 
-										TextYml.getText("words.colors." + colorOrder[stateMachine.contextualIndex("starterColor")]).toUpperCase()),
+										TextYml.getText(player, "words.colors." + colorOrder[stateMachine.contextualIndex("starterColor")]).toUpperCase()),
 							this::onCompletedAction, this:: onCanceledAction));
 				})
 				.registerComplete(() -> {
@@ -181,10 +187,10 @@ public class LudoCreationWizard extends GameCreationWizard {
 				board.diagonalPairs.removeLast();
 			})
 			.registerProgress(() -> {
-				ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText("wizards.ludo.diagonals"));
+				ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.diagonals"));
 			})
 			.registerAction(() -> {
-				ToolbarMessage.sendImmediate(player, stateTsk, TextYml.getText("wizards.ludo.selectDiagonalPair")
+				ToolbarMessage.sendImmediate(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectDiagonalPair")
 						.replace("<progress>", ProgressBar.generate(stateMachine.contextualIndex("diagonalProgress"), isSixPlayer ? 3 : 2))).setPermanent();
 				
 				setNewAction(new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCanceledAction));

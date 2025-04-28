@@ -19,6 +19,7 @@ public abstract class PlayerAction {
 	protected Player player;
 	protected UUID tsk = UUID.randomUUID(); //ToolbarMessage source key
 	
+	protected boolean isComplete = false;
 	private Task publishDelay;
 	
 	public PlayerAction(Player player, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
@@ -39,6 +40,7 @@ public abstract class PlayerAction {
 	}
 	
 	protected void publishEvent() {
+		isComplete = true;
 		successCallback.accept(this);
 
 		destroy();
@@ -52,6 +54,7 @@ public abstract class PlayerAction {
 		if (publishDelay != null)
 			publishDelay.cancel();
 		
+		isComplete = true;
 		publishDelay = new Task(tsk).setDuration(delay).registerOnComplete(this::publishEvent);
 		Timer.register(publishDelay);
 	}

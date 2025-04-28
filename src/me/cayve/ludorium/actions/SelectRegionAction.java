@@ -47,7 +47,7 @@ public class SelectRegionAction extends PlayerAction {
 		
 		this.regionName = regionName;
 		
-		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText("actions.region.selectFirst").replace("<name>", regionName)
+		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "actions.region.selectFirst").replace("<name>", regionName)
 				.replace("<progress>", ProgressBar.generate(0, 2))).setPermanent();
 		selectBlocksAction = new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCancelledAction).registerSelectEvent(this::onBlockSelected);
 		selectBlocksAction.setAnimationStates(animateSelection, false);
@@ -63,7 +63,7 @@ public class SelectRegionAction extends PlayerAction {
 	private void onBlockSelected(Block block) 
 	{
 		//Update message
-		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText("actions.region.selectSecond").replace("<name>", regionName)
+		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "actions.region.selectSecond").replace("<name>", regionName)
 				.replace("<progress>", ProgressBar.generate(selectBlocksAction.getSelectedCount(), 2))).setPermanent();
 	}
 	
@@ -95,7 +95,7 @@ public class SelectRegionAction extends PlayerAction {
 			cancelEvent();
 		else //If second select, revert to first selection
 		{
-			ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText("actions.region.selectFirst").replace("<name>", regionName)
+			ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "actions.region.selectFirst").replace("<name>", regionName)
 					.replace("<progress>", ProgressBar.generate(2, 2))).setPermanent();
 		}
 	}

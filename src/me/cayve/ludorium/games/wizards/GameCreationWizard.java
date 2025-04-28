@@ -105,7 +105,8 @@ public abstract class GameCreationWizard implements Listener {
 	public void activateWizard() {
 		if (stateMachine.hasStarted() || player == null) return;
 		
-		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText("wizards.started")).setType(eType.SUCCESS).setDuration(2).clearIfSkipped();
+		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "wizards.started"))
+			.setType(eType.SUCCESS).setDuration(2).clearIfSkipped();
 		
 		stateMachine.next();
 	}
@@ -162,11 +163,11 @@ public abstract class GameCreationWizard implements Listener {
 		destroy();
 	}
 	protected void cancelWizard() {
-		cancelWizard(TextYml.getText("wizards.canceled"));
+		cancelWizard(TextYml.getText(player, "wizards.canceled"));
 	}
 	
 	protected void completeWizard() {
-		ToolbarMessage.sendImmediate(player, TextYml.getText("wizards.completed")).setType(eType.SUCCESS);
+		ToolbarMessage.sendImmediate(player, TextYml.getText(player, "wizards.completed")).setType(eType.SUCCESS);
 		destroy();
 	}
 }

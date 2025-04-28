@@ -55,6 +55,18 @@ public class CrouchAction extends PlayerAction implements Listener {
 			else if (cancelTask != null && !cancelTask.isComplete())
 				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.75f, 1 + (cancelTask.getPercentTimeLeft()));
 		}).pause());
+		
+		Timer.register(new Task(tsk).registerOnUpdate(() -> {
+			if (!player.isSneaking())
+				ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold")
+						.replace("<context>", 
+								(resultType == eResult.BOTH || resultType == eResult.SUBMIT ?
+										TextYml.getText(player, "actions.crouch.confirm") : "") + 
+								(resultType == eResult.BOTH ? "/" : "") + 
+								(resultType == eResult.BOTH || resultType == eResult.CANCEL ?
+										TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]) : "")
+								)).clearIfSkipped();
+		}).setRefreshRate(20));
 	}
 	
 	private void updateMessage() {
@@ -63,15 +75,15 @@ public class CrouchAction extends PlayerAction implements Listener {
 		if (resultType == eResult.SUBMIT || resultType == eResult.BOTH)
 		{
 			if (submitTask.isComplete())
-				message += TextYml.getText("actions.crouch.confirmed") + " " + 
+				message += TextYml.getText(player, "actions.crouch.confirmed") + " " + 
 						ChatColor.translateAlternateColorCodes('&', ProgressBar.generate(submitTask.getPercentTimeCompleted(), "[&a%i%o&r]"));
 			else
-				message += TextYml.getText("actions.crouch.confirm") + " " + ProgressBar.generate(submitTask.getPercentTimeCompleted());
+				message += TextYml.getText(player, "actions.crouch.confirm") + " " + ProgressBar.generate(submitTask.getPercentTimeCompleted());
 		}
 		if (resultType == eResult.BOTH)
 			message += ProgressBar.generate(transitionTask.getPercentTimeCompleted(), 6, " %i %o ");
 		if (resultType == eResult.BOTH || resultType == eResult.CANCEL)
-			message += TextYml.getText("actions.crouch." + cancelContexts[cancelContext.ordinal()])
+			message += TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()])
 					+ " " + ProgressBar.generate(cancelTask.getPercentTimeCompleted());
 		
 		if (messageObject != null)

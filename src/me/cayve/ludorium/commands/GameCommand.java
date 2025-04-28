@@ -2,6 +2,7 @@ package me.cayve.ludorium.commands;
 
 import java.util.function.Supplier;
 
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -82,12 +83,15 @@ public class GameCommand {
 				.executes(ctx -> 
 				{
 					String instanceName = ctx.getArgument("instance name", String.class);
+					CommandSender sender = ctx.getSource().getSender();
 					
 					if (GameBase.deleteGameInstance(instanceName, type))
-						ctx.getSource().getSender().sendMessage(TextYml.getText("commands.instanceDeleteSuccess")
+						sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
+								"commands.instanceDeleteSuccess")
 								.replace("<name>", instanceName).replace("<game>", label));
 					else //Failed to delete instance
-						ctx.getSource().getSender().sendMessage(TextYml.getText("commands.instanceDeleteFailure")
+						sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
+								"commands.instanceDeleteFailure")
 								.replace("<name>", instanceName).replace("<game>", label));
 					return 1;
 				}).build();
@@ -97,7 +101,9 @@ public class GameCommand {
 	private LiteralCommandNode<CommandSourceStack> buildList() {
 		return LiteralArgumentBuilder.<CommandSourceStack>literal("list").executes(ctx -> 
 		{ 
-			ctx.getSource().getSender().sendMessage(TextYml.getText(
+			CommandSender sender = ctx.getSource().getSender();
+			
+			sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
 					GameBase.getInstanceList(type).size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
 					.replace("<game>", label));
 			return 1;

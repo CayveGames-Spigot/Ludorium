@@ -74,12 +74,14 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 	
 	@EventHandler
 	private void onBlockClick(PlayerInteractEvent event) {
+		if (isComplete) return;
+		
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK ||
 				event.getHand() == EquipmentSlot.OFF_HAND ||
 				!event.getPlayer().getUniqueId().equals(player.getUniqueId())) return;
 		
 		if (selectedBlocks.contains(event.getClickedBlock()) && !allowSame) {
-			ToolbarMessage.clearSourceAndSendImmediate(player, tsk, TextYml.getText("actions.selectBlocks.sameBlock")).setType(eType.ERROR);
+			ToolbarMessage.clearSourceAndSendImmediate(player, tsk, TextYml.getText(player, "actions.selectBlocks.sameBlock")).setType(eType.ERROR);
 			return;
 		}
 		
@@ -95,6 +97,11 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 			animateAndPublish();
 	}
 	
+	/**
+	 * Sets whether the given animation states will trigger during this action
+	 * @param animateSelection
+	 * @param animateCompletion
+	 */
 	public void setAnimationStates(boolean animateSelection, boolean animateCompletion) {
 		this.animateSelection = animateSelection;
 		this.animateCompletion = animateCompletion;
@@ -118,13 +125,16 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		//If selection animation is enabled and there were less than 2 blocks selected, ignore the animation
 		//since the blocks have already been animated
 		if ((animateSelection && selectedBlocks.size() <= 2) || !animateCompletion) 
+		{
 			publishEvent();
+			return;
+		}
 		
 		//Calculates an arbitrary "weight" for how many blocks were selected
 		//40 represents the upper bound of blocks
 		float weight = Math.clamp(selectedBlocks.size() / 40, 0, 1);
 		
-		float duration = 1 + (4 * weight);
+		float duration = 2 + (4 * weight);
 		float overlap = 0.3f + (0.45f * (1 - weight));
 
 		ArrayAnimations.wave(tsk, 
