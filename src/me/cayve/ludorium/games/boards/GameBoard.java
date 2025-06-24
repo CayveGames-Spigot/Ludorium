@@ -1,32 +1,22 @@
 package me.cayve.ludorium.games.boards;
 
-import java.util.ArrayList;
-import java.util.function.Consumer;
-
-import me.cayve.ludorium.utils.locational.Vector2DInt;
+import me.cayve.ludorium.games.lobbies.GameLobby;
 
 public abstract class GameBoard {
 	
-	private ArrayList<Consumer<Vector2DInt>> interactionListeners;
+	protected GameLobby lobby;
+	protected String boardName;
+	//private GameInstance gameInstance;
 	
-	public GameBoard() {
-		interactionListeners = new ArrayList<Consumer<Vector2DInt>>();
+	public GameBoard(String name) {
+		boardName = name;
 	}
 	
-	public void registerInteractionListener(Consumer<Vector2DInt> listener) {
-		if (interactionListeners.contains(listener)) return;
-		
-		interactionListeners.add(listener);
-	}
+	protected abstract void generateLobby();
 	
-	public void unregisterInteractionListener(Consumer<Vector2DInt> listener) {
-		if (!interactionListeners.contains(listener)) return;
-		
-		interactionListeners.remove(listener);
-	}
+	public String getName() { return boardName; }
 	
-	protected void publishInteractionEvent(Vector2DInt coord) {
-		for (Consumer<Vector2DInt> listener : interactionListeners)
-			listener.accept(coord);
+	public void destroy() {
+		lobby.destroy();
 	}
 }

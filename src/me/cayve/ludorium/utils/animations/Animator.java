@@ -183,7 +183,16 @@ public class Animator {
 	}
 	
 	private void onAnyAnimationComplete() {
-		boolean complete = true;
+		if (!isAnimating())
+			onComplete.run();
+	}
+	
+	private void setAnimationListeners(Animation<?> animation) {
+		animation.registerListeners(this::onAnyAnimationUpdate, this::onAnyAnimationComplete);
+	}
+	
+	public boolean isAnimating() {
+		boolean isAnimating = false;
 		if (	(transform != null && !transform.isComplete()) ||
 				(position != null && !position.isComplete()) ||
 				(rotation != null && !rotation.isComplete()) ||
@@ -193,13 +202,7 @@ public class Animator {
 				(x != null && !x.isComplete()) ||
 				(y != null && !y.isComplete()) ||
 				(z != null && !z.isComplete()))
-			complete = false;
-		
-		if (complete)
-			onComplete.run();
-	}
-	
-	private void setAnimationListeners(Animation<?> animation) {
-		animation.registerListeners(this::onAnyAnimationUpdate, this::onAnyAnimationComplete);
+			isAnimating = true;
+		return isAnimating;
 	}
 }

@@ -1,0 +1,4 @@
+- [ ] Entities not removed when overwritten by same name
+- [ ] Solo cancel prompt has no audio
+- [x] SE facing regions don't animate properly
+- [ ] Overlap and same selection possible with different prompts

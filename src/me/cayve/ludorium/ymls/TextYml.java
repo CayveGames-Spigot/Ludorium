@@ -19,23 +19,23 @@ public class TextYml {
 		
 		//Make sure fallback text is reloaded
 		if (!infos.containsKey(lang))
-			infos.put(lang, YmlFiles.reload("Text/Text.yml"));
+			infos.put(lang, YmlFiles.reload("text/Text.yml"));
 		
 		//Attempt to get locale text
 		try {
 			lang += locale.getISO3Language();
 			
-			if (!YmlFiles.exists("Text/Text" + lang + ".yml"))
+			if (!YmlFiles.exists("text/Text" + lang + ".yml"))
 				lang = "_";
 			else if (!infos.containsKey(lang))
-				infos.put(lang, YmlFiles.reload("Text/Text" + lang + ".yml"));
+				infos.put(lang, YmlFiles.reload("text/Text" + lang + ".yml"));
 			
 		} catch (Exception e) {}
 		
 		String path = text;
 
 		if (!infos.get(lang).customConfig.contains(path))
-			return ChatColor.RED + "Text/Text" + lang + ".yml path: " + text + " not found.";
+			return ChatColor.RED + "text/Text" + lang + ".yml path: " + text + " not found.";
 		return HexColors.Convert(ChatColor.translateAlternateColorCodes('&', infos.get(lang).customConfig.getString(path)));
 	}
 	

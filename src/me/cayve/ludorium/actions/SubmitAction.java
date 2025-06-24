@@ -16,27 +16,27 @@ import me.cayve.ludorium.utils.ToolbarMessage.Message;
 import me.cayve.ludorium.ymls.TextYml;
 import net.md_5.bungee.api.ChatColor;
 
-public class CrouchAction extends PlayerAction implements Listener {
+public class SubmitAction extends PlayerAction implements Listener {
 
 	public enum eResult { SUBMIT, CANCEL, BOTH }
 	public enum eCancelContext { CANCEL, GO_BACK, SKIP }
 	private static final String[] cancelContexts = { "cancel", "goBack", "skip" };
 	
 	private float duration = 1.5f;
-	private Task submitTask, transitionTask, cancelTask, sfxTask;
+	private Task submitTask, transitionTask, cancelTask, sfxTask, reminderTask;
 	private eResult resultType;
 	private eCancelContext cancelContext = eCancelContext.CANCEL;
 	
 	private Message messageObject;
 	
-	public CrouchAction(Player player, eResult resultType, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
+	public SubmitAction(Player player, eResult resultType, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
 		super(player, successCallback, failureCallback);
 		this.resultType = resultType;
 		
 		createDefaults();
 	}
 	
-	public CrouchAction(Player player, eResult resultType, long duration, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
+	public SubmitAction(Player player, eResult resultType, long duration, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
 		super(player, successCallback, failureCallback);
 		this.duration = duration;
 		this.resultType = resultType;
@@ -44,7 +44,7 @@ public class CrouchAction extends PlayerAction implements Listener {
 		createDefaults();
 	}
 	
-	public CrouchAction setCancelContext(eCancelContext context) { this.cancelContext = context; return this; }
+	public SubmitAction setCancelContext(eCancelContext context) { this.cancelContext = context; return this; }
 
 	private void createDefaults() {
 		sfxTask = Timer.register(new Task(tsk).registerOnUpdate(() -> {
@@ -56,7 +56,7 @@ public class CrouchAction extends PlayerAction implements Listener {
 				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.75f, 1 + (cancelTask.getPercentTimeLeft()));
 		}).pause());
 		
-		Timer.register(new Task(tsk).registerOnUpdate(() -> {
+		reminderTask = Timer.register(new Task(tsk).registerOnUpdate(() -> {
 			if (!player.isSneaking())
 				ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold")
 						.replace("<context>", 
@@ -66,7 +66,12 @@ public class CrouchAction extends PlayerAction implements Listener {
 								(resultType == eResult.BOTH || resultType == eResult.CANCEL ?
 										TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]) : "")
 								)).clearIfSkipped();
-		}).setRefreshRate(20));
+		}).setRefreshRate(30));
+	}
+	
+	public void restartReminder() {
+		reminderTask.setRefreshRate(10);
+		reminderTask.restart();
 	}
 	
 	private void updateMessage() {

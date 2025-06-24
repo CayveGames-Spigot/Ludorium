@@ -8,11 +8,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.cayve.ludorium.commands.LudoCommand;
 import me.cayve.ludorium.commands.LudoriumCommand;
-import me.cayve.ludorium.games.RegionTriggerManager;
+import me.cayve.ludorium.games.boards.BoardList;
 import me.cayve.ludorium.games.wizards.GameCreationWizard;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.entities.LudoriumEntity;
+import me.cayve.ludorium.utils.locational.RegionTriggerManager;
 
 public class LudoriumPlugin extends JavaPlugin {
 
@@ -63,6 +64,7 @@ public class LudoriumPlugin extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		GameCreationWizard.destroyAll();
+		BoardList.destroyAll();
 		
 		LudoriumCommand.uninitialize();
 	}

@@ -15,7 +15,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
-import me.cayve.ludorium.actions.CrouchAction.eResult;
+import me.cayve.ludorium.actions.SubmitAction.eResult;
 import me.cayve.ludorium.utils.ArrayUtils;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
@@ -29,12 +29,12 @@ import me.cayve.ludorium.ymls.TextYml;
 public class SelectBlocksAction extends PlayerAction implements Listener {
 
 	private ArrayList<Block> selectedBlocks = new ArrayList<>();;
-	private ArrayList<DisplayEntity<BlockDisplay>> activeAnimations = new ArrayList<>();
 	private Consumer<Block> selectCallback;
-	private CrouchAction submitAction;
+	private SubmitAction submitAction;
 	private int blockCount;
 	private boolean allowSame;
 	
+	private ArrayList<DisplayEntity<BlockDisplay>> activeAnimations = new ArrayList<>();
 	private boolean animateSelection = true;
 	private boolean animateCompletion = true;
 	
@@ -44,7 +44,7 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		this.blockCount = blockCount;
 		this.allowSame = allowSame;
 		
-		submitAction = new CrouchAction(player, blockCount == -1 ? eResult.BOTH : eResult.CANCEL, this::onSubmit, this::onCancel);
+		submitAction = new SubmitAction(player, blockCount == -1 ? eResult.BOTH : eResult.CANCEL, this::onSubmit, this::onCancel);
 	}
 	
 	//Constructor for selecting a single block
@@ -53,7 +53,7 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		this.blockCount = 1;
 		this.allowSame = false;
 		
-		submitAction = new CrouchAction(player, eResult.CANCEL, this::onSubmit, this::onCancel);
+		submitAction = new SubmitAction(player, eResult.CANCEL, this::onSubmit, this::onCancel);
 	}
 	
 	//Callback for each selected block
@@ -76,6 +76,9 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 	private void onBlockClick(PlayerInteractEvent event) {
 		if (isComplete) return;
 		
+		//This makes it so that the reminders only appear 10 seconds after the player doesn't do anything
+		submitAction.restartReminder();
+		
 		if (event.getAction() != Action.RIGHT_CLICK_BLOCK ||
 				event.getHand() == EquipmentSlot.OFF_HAND ||
 				!event.getPlayer().getUniqueId().equals(player.getUniqueId())) return;
@@ -88,13 +91,13 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		selectedBlocks.add(event.getClickedBlock());
 		
 		player.playSound(player.getLocation(), Sound.UI_HUD_BUBBLE_POP, .75f, 1.4f + (.6f * new Random().nextFloat()));
-		selectAnimation(event.getClickedBlock());
+		registerAnimation(event.getClickedBlock());
 		
 		if (selectCallback != null)
 			selectCallback.accept(event.getClickedBlock());
 		
 		if (selectedBlocks.size() == blockCount)
-			animateAndPublish();
+			finalizeAction();
 	}
 	
 	/**
@@ -107,24 +110,20 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		this.animateCompletion = animateCompletion;
 	}
 	
-	private void selectAnimation(Block block) {
-		if (!animateSelection) return;
+	private void registerAnimation(Block block) {
+		//If neither animation cycles will happen, don't even register a new entity
+		if (!animateSelection && !animateCompletion) return;
 		
 		BlockEntity newAnimation = new BlockEntity(block.getLocation(), block.getBlockData());
 		
 		activeAnimations.add(newAnimation);
 		
-		newAnimation.registerOnAnimatorComplete((entity) -> {
-			entity.remove();
-		});
-		
-		newAnimation.getAnimator().setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
+		if (animateSelection && !(blockCount == 1 && animateCompletion))
+			newAnimation.getAnimator().setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
 	}
 	
-	private void animateAndPublish() {
-		//If selection animation is enabled and there were less than 2 blocks selected, ignore the animation
-		//since the blocks have already been animated
-		if ((animateSelection && selectedBlocks.size() <= 2) || !animateCompletion) 
+	private void finalizeAction() {
+		if (!animateCompletion)
 		{
 			publishEvent();
 			return;
@@ -149,7 +148,7 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		if (selectedBlocks.size() == 0)
 			cancelEvent();
 		else
-			animateAndPublish();
+			finalizeAction();
 	}
 	
 	//Player crouched to cancel

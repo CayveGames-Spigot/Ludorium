@@ -1,8 +1,8 @@
 package me.cayve.ludorium.utils.locational;
 
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 
-import me.cayve.ludorium.utils.eDirection;
 import me.cayve.ludorium.utils.entities.BlockEntity;
 
 public class Region {
@@ -74,6 +74,11 @@ public class Region {
 		return LocationUtil.relativeLocation(minimum, xLength/2f, yLength/2f, zLength/2f);
 	}
 	
+	/**
+	 * Calculates the direction the given location is relative to the center of the region
+	 * @param location
+	 * @return
+	 */
 	public eDirection relativeDirection(Location location) {
 		Location center = getCenter();
 
@@ -82,5 +87,14 @@ public class Region {
 						center.getX() == location.getX() ? 0 : location.getX() > center.getX() ? 1 : -1,
 						center.getZ() == location.getZ() ? 0 : location.getZ() > center.getZ() ? 1 : -1
 				));
+	}
+	
+	/**
+	 * Calculates the direction the center of the given block is relative to the center of the region
+	 * @param block
+	 * @return
+	 */
+	public eDirection relativeDirection(Block block) {
+		return relativeDirection(LocationUtil.relativeLocation(block.getLocation(), 0.5f, 0.5f, 0.5f));
 	}
 }

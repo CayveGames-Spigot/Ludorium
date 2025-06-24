@@ -2,12 +2,12 @@ package me.cayve.ludorium.games.wizards;
 
 import org.bukkit.Location;
 
-import me.cayve.ludorium.actions.CrouchAction;
-import me.cayve.ludorium.actions.CrouchAction.eResult;
 import me.cayve.ludorium.actions.SelectBlocksAction;
 import me.cayve.ludorium.actions.SelectRegionAction;
+import me.cayve.ludorium.actions.SubmitAction;
+import me.cayve.ludorium.actions.SubmitAction.eResult;
+import me.cayve.ludorium.games.boards.BoardList;
 import me.cayve.ludorium.games.boards.LudoBoard;
-import me.cayve.ludorium.utils.ProgressBar;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
@@ -19,11 +19,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 	//Manual mode will force the wizard to select every board space 
 	//Otherwise, the board will attempt to find the spaces automatically
 	private boolean isSixPlayer;
-	private LudoBoard board;
-	
-	private String[] colorOrder = { "red", "yellow", "green", "blue", "purple", "black" };
-	
-	private int homeTileCount = -1;
+	private LudoBoard.TileLocations tiles;
 	
 	public LudoCreationWizard() {
 		super();
@@ -55,12 +51,12 @@ public class LudoCreationWizard extends GameCreationWizard {
 	private void promptColorOrderVerification() {
 		ToolbarMessage.sendQueue(player, tsk, TextYml.getText(player, "wizards.ludo.colorVerification")
 				.replace("<colors>", String.format("%s->%s->%s->%s" + (isSixPlayer ? "->%s->%s" : ""),
-						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[0]), "■"),
-						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[1]), "■"),
-						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[2]), "■"),
-						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[3]), "■"),
-						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[4]), "■"),
-						replaceAllButColor(TextYml.getText(player, "words.colors." + colorOrder[5]), "■"))
+						replaceAllButColor(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[0]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[1]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[2]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[3]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[4]), "■"),
+						replaceAllButColor(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[5]), "■"))
 							.toUpperCase())
 				//Replaces color with the ordered RED->YELLOW->GREEN->BLUE and adds the last two if six players
 				).setDuration(12).showDuration().clearIfSkipped();
@@ -75,21 +71,22 @@ public class LudoCreationWizard extends GameCreationWizard {
 				.newState()
 					.registerProgress(this::promptColorOrderVerification)
 					.registerAction(() -> {
-						ToolbarMessage.sendQueue(player, stateTsk, TextYml.getText(player, "wizards.ludo.attemptingAutomatic"));
+						ToolbarMessage.sendQueue(player, stateTsk, TextYml.getText(player, "wizards.ludo.attemptingAutomatic"))
+							.setDuration(5);
 						
 						setNewAction(new SelectRegionAction(player, "Ludo Board", this::onCompletedAction, this::onCanceledAction));
 					}).registerComplete(() -> {
-						board = LudoBoard.identifyBoard(((SelectRegionAction)currentAction).getRegion(), isSixPlayer);
+						tiles = LudoBoard.identifyBoard(((SelectRegionAction)currentAction).getRegion(), isSixPlayer);
 							
-						if (board == null)
+						if (tiles == null)
 							cancelWizard(TextYml.getText(player, "wizards.ludo.noBoardIdentified"));
 					}).buildState()
 				.newState()
 					.registerAction(() -> {
 						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.identifiedBoard")).setPermanent();
-						board.animate();
+						tiles.animate();
 						
-						setNewAction(new CrouchAction(player, eResult.BOTH, this::onCompletedAction, this::onCanceledAction));
+						setNewAction(new SubmitAction(player, eResult.BOTH, this::onCompletedAction, this::onCanceledAction));
 					})
 					.registerComplete(() -> {
 						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.created")).setType(eType.SUCCESS);
@@ -97,7 +94,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 						createGame();
 					})
 					.registerIncomplete(() -> {
-						board.destroy();
+						tiles.destroy();
 						
 						cancelWizard();
 					}).buildState();
@@ -112,14 +109,14 @@ public class LudoCreationWizard extends GameCreationWizard {
 				.registerProgress(this::promptColorOrderVerification)
 				.registerAction(() -> { //Started manual mode
 					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectTiles")
-							.replace("<color>", TextYml.getText(player, "words.colors." + colorOrder[0]).toUpperCase())).setPermanent();
+							.replace("<color>", TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[0]).toUpperCase())).setPermanent();
 					
 					setNewAction(new SelectBlocksAction(player, -1, false, this::onCompletedAction, this::onCanceledAction));
 				})
 				.registerComplete(() -> {
-					board = new LudoBoard();
+					tiles = new LudoBoard.TileLocations();
 					
-					board.tiles = ((SelectBlocksAction) currentAction).getLocations();
+					tiles.tiles = ((SelectBlocksAction) currentAction).getLocations();
 				}).buildState()
 				
 			/*
@@ -129,17 +126,16 @@ public class LudoCreationWizard extends GameCreationWizard {
 				.registerAction(() -> {
 					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectHome")
 							.replace("<color>", 
-									TextYml.getText(player, "words.colors." + colorOrder[stateMachine.contextualIndex("homeColor")]).toUpperCase()))
+									TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("homeColor")]).toUpperCase()))
 							.setPermanent();
 					 
-					setNewAction(new SelectBlocksAction(player, homeTileCount, false, this::onCompletedAction, this::onCanceledAction));
+					setNewAction(new SelectBlocksAction(player, 4, false, this::onCompletedAction, this::onCanceledAction));
 				})
 				.registerComplete(() -> {
-					for (Location location : ((SelectBlocksAction) currentAction).getLocations())
-						board.homeTiles.add(location);
+					ToolbarMessage.clearAllFromSource(stateTsk);
 					
-					if (stateMachine.contextualIndex("homeColor") == 0)
-						homeTileCount = ((SelectBlocksAction) currentAction).getSelectedCount();
+					for (Location location : ((SelectBlocksAction) currentAction).getLocations())
+						tiles.homeTiles.add(location);
 				}).buildState()
 				
 			.copyState("HOME SELECTION").buildState()
@@ -156,17 +152,17 @@ public class LudoCreationWizard extends GameCreationWizard {
 			 */
 			stateMachine.newState("STARTER REGION")
 				.registerRegress(() -> {
-					board.centerPlates.remove(board.centerPlates.size() - 1);
+					tiles.centerPlates.remove(tiles.centerPlates.size() - 1);
 				})
 				.registerAction(() -> {
 					setNewAction(new SelectRegionAction(player, 
 							TextYml.getText(player, "wizards.ludo.selectStarter")
 								.replace("<color>", 
-										TextYml.getText(player, "words.colors." + colorOrder[stateMachine.contextualIndex("starterColor")]).toUpperCase()),
+										TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("starterColor")]).toUpperCase()),
 							this::onCompletedAction, this:: onCanceledAction));
 				})
 				.registerComplete(() -> {
-					board.centerPlates.add(((SelectRegionAction) currentAction).getRegion());	
+					tiles.centerPlates.add(((SelectRegionAction) currentAction).getRegion());	
 				}).buildState()
 				
 			.copyState("STARTER REGION").buildState()
@@ -176,50 +172,13 @@ public class LudoCreationWizard extends GameCreationWizard {
 		if (isSixPlayer)
 			stateMachine
 				.copyState("STARTER REGION").buildState()
-				.copyState("STARTER REGION").buildState();
-		
-		/*
-		 * Select diagonals
-		 */
-		stateMachine.newState("DIAGONAL")
-			.registerRegress(() -> {
-				board.diagonalPairs.removeLast();
-				board.diagonalPairs.removeLast();
-			})
-			.registerProgress(() -> {
-				ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.diagonals"));
-			})
-			.registerAction(() -> {
-				ToolbarMessage.sendImmediate(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectDiagonalPair")
-						.replace("<progress>", ProgressBar.generate(stateMachine.contextualIndex("diagonalProgress"), isSixPlayer ? 3 : 2))).setPermanent();
-				
-				setNewAction(new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCanceledAction));
-			})
-			.registerComplete(() -> {
-				for (Location location : ((SelectBlocksAction) currentAction).getLocations())
-					board.diagonalPairs.add(location);
-			})
-			.registerIncomplete(() -> { //Player denied diagonals
-				createGame();
-			}).buildState();
-		
-		if (isSixPlayer)
-			stateMachine.copyState("DIAGONAL")
-				.registerIncomplete(null)
-				.registerProgress(null);
-		
-		stateMachine.copyState("DIAGONAL")
-			.registerIncomplete(null)
-			.registerProgress(null)
-			.registerComplete(() -> {
-				for (Location location : ((SelectBlocksAction) currentAction).getLocations())
-					board.diagonalPairs.add(location);
-				
-				createGame();
-			});
+				.copyState("STARTER REGION")
+					.registerComplete(this::createGame).buildState();
 	}
 	
 	private void createGame() {
+		
+		BoardList.save(new LudoBoard(instanceName, tiles, isSixPlayer));
 		
 		completeWizard();
 	}

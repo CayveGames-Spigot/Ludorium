@@ -6,26 +6,39 @@ import java.util.function.Consumer;
 
 import org.bukkit.entity.Player;
 
-import me.cayve.ludorium.games.GameBase;
-
 public abstract class GameLobby {
 	
-	protected GameBase game;
+	private boolean isEnabled;
+	
 	private ArrayList<UUID> players;
 	private int minimum, maximum; //Max and min player count
 	
-	private ArrayList<Consumer<Player>> lobbyJoinEvent;
-	private ArrayList<Consumer<Player>> lobbyLeaveEvent;
+	private ArrayList<Consumer<Integer>> lobbyJoinEvent;
+	private ArrayList<Consumer<Integer>> lobbyLeaveEvent;
 	
-	public GameLobby(GameBase game, int minimum, int maximum) {
-		this.game = game;
+	public GameLobby(int minimum, int maximum) {
 		this.minimum = minimum;
 		this.maximum = maximum;
 		
 		players = new ArrayList<UUID>();
-		lobbyJoinEvent = new ArrayList<Consumer<Player>>();
-		lobbyLeaveEvent = new ArrayList<Consumer<Player>>();
+		lobbyJoinEvent = new ArrayList<Consumer<Integer>>();
+		lobbyLeaveEvent = new ArrayList<Consumer<Integer>>();
 	}
+	
+	/**
+	 * Enables the lobby to allow for joining
+	 */
+	public void enable() {
+		isEnabled = true;
+	}
+	
+	/**
+	 * Disables the lobby, disallowing joining
+	 */
+	public void disable() {
+		isEnabled = false;
+	}
+	public boolean isEnabled() { return isEnabled; }
 	
 	public void attemptLobbyJoin(Player player) {
 		//Find next available index and join it
@@ -39,31 +52,14 @@ public abstract class GameLobby {
 		
 	}
 	
-	public void registerJoinListener(Consumer<Player> listener) {
-		if (lobbyJoinEvent.contains(listener)) return;
-		
+	public void registerJoinListener(Consumer<Integer> listener) {
 		lobbyJoinEvent.add(listener);
 	}
 	
-	public void unregisterJoinListener(Consumer<Player> listener) {
-		if (!lobbyJoinEvent.contains(listener)) return;
-		
-		lobbyJoinEvent.remove(listener);
-	}
-	
-	public void registerLeaveListener(Consumer<Player> listener) {
-		if (lobbyLeaveEvent.contains(listener)) return;
-		
+	public void registerLeaveListener(Consumer<Integer> listener) {
 		lobbyLeaveEvent.add(listener);
 	}
-	
-	public void unregisterLeaveListener(Consumer<Player> listener) {
-		if (!lobbyLeaveEvent.contains(listener)) return;
-		
-		lobbyLeaveEvent.remove(listener);
-	}
 
-	
 	public int getPlayerMax() { return maximum; }
 	public int getPlayerMin() { return minimum; }
 	public int getPlayerCount() { return players.size(); }
@@ -72,4 +68,6 @@ public abstract class GameLobby {
 		return players.get(0);
 	}
 	public boolean hasPlayer(UUID player) { return players.contains(player); }
+	
+	public void destroy() {}
 }

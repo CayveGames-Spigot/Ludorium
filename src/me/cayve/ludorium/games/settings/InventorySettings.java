@@ -17,8 +17,10 @@ public class InventorySettings extends GameSettings implements Listener {
 		super(settings, lobby);
 		
 		//Create inventory
-		lobby.registerJoinListener(this::onLobbyJoin);
-		lobby.registerLeaveListener(this::onLobbyLeave);
+		//lobby.registerJoinListener(this::onLobbyJoin);
+		//lobby.registerLeaveListener(this::onLobbyLeave);
+		onLobbyJoin(null);
+		onLobbyLeave(null);
 	}
 	
 	public void openSettings(Player player) { player.openInventory(inventory); }

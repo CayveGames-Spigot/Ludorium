@@ -1,10 +1,8 @@
-package me.cayve.ludorium.games;
+package me.cayve.ludorium.utils.locational;
 
 import java.util.ArrayList;
 
 import org.bukkit.entity.Player;
-
-import me.cayve.ludorium.utils.locational.Region;
 
 public class RegionTriggerManager {
 	

@@ -5,14 +5,21 @@ import java.util.function.Consumer;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
+import org.bukkit.entity.Interaction;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.util.Transformation;
 
+import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.locational.Transform;
 import me.cayve.ludorium.utils.locational.Vector2D;
 import me.cayve.ludorium.utils.locational.Vector3D;
 
-public class DisplayEntity<T extends Display> {
+public class DisplayEntity<T extends Display> implements Listener {
 	
 	protected T display;
 	
@@ -24,12 +31,26 @@ public class DisplayEntity<T extends Display> {
 	private ArrayList<Consumer<DisplayEntity<T>>> onAnimatorCompleteEvent = new ArrayList<>();
 	private ArrayList<Consumer<DisplayEntity<T>>> onDestroyEvent = new ArrayList<>();
 	
+	private Interaction interaction;
+	private Vector2D interactionBounds;
+	private ArrayList<Consumer<Player>> onInteractedWith = new ArrayList<>();
+	
 	public DisplayEntity(Class<T> type, Location location) {
 		this.type = type;
 		this.transform = new Transform();
 		this.transform.setLocation(location);
 		
 		animator = new Animator(this::onAnimatorUpdate, this::onAnimatorComplete);
+	}
+	
+	/**
+	 * Enables an interaction for the entity with the given bounds
+	 * @param interactionBounds The width and height of the interaction
+	 */
+	public void setInteraction(Vector2D interactionBounds) {
+		this.interactionBounds = interactionBounds;
+		
+		displayTransform(transform);
 	}
 	
 	/**
@@ -100,6 +121,14 @@ public class DisplayEntity<T extends Display> {
 		Transformation displayTransformation = display.getTransformation();
 		displayTransformation.getScale().set(transform.scale);
 		display.setTransformation(displayTransformation);
+		
+		//If the entity has a collider, transform it too
+		if (interaction == null) return;
+		interaction.teleport(transform.getLocation());
+		interaction.setRotation(transform.yaw, transform.pitch);
+		
+		interaction.setInteractionWidth(interactionBounds.x * transform.scale);
+		interaction.setInteractionHeight(interactionBounds.y * transform.scale);
 	}
 	
 	/**
@@ -117,6 +146,12 @@ public class DisplayEntity<T extends Display> {
 		}
 			
 		display = LudoriumEntity.spawn(transform.getLocation(), type);
+		
+		if (interactionBounds != null)
+		{
+			interaction = LudoriumEntity.spawn(transform.getLocation(), Interaction.class);
+			LudoriumPlugin.registerEvent(this);
+		}
 		
 		return display;
 	}
@@ -138,7 +173,40 @@ public class DisplayEntity<T extends Display> {
 			LudoriumEntity.remove(display);
 			display = null;
 		}
+		
+		if (interaction != null)
+		{
+			LudoriumEntity.remove(interaction);
+			interaction = null;
+			
+			HandlerList.unregisterAll(this);
+		}
 	}
+	
+	@EventHandler
+	/**
+	 * The interaction event trigger
+	 * @param event
+	 */
+	public void onInteractedWith(PlayerInteractEntityEvent event) {
+	{
+		if (!(event.getRightClicked() instanceof Interaction) ||
+			!interaction.equals(event.getRightClicked())) 
+				return;
+		
+		for (Consumer<Player> listener : onInteractedWith) 
+			listener.accept(event.getPlayer());
+	}
+		
+	}
+	/**
+	 * Registers a listener for when the interaction entity is interacted with
+	 * @param listener
+	 */
+	public void registerOnInteractedWith(Consumer<Player> listener) {
+		onInteractedWith.add(listener);
+	}
+	
 	
 	/**
 	 * Registers a listener for when the animator completes all animations
@@ -152,6 +220,7 @@ public class DisplayEntity<T extends Display> {
 		onDestroyEvent.add(listener);
 	}
 	/**
+	 * Animations will temporarily enable the entity during playback
 	 * @return The entity's animator
 	 */
 	public Animator getAnimator() { return animator; }

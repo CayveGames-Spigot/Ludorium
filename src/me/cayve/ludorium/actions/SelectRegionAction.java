@@ -85,7 +85,7 @@ public class SelectRegionAction extends PlayerAction {
 
 		GridAnimations.wave(tsk, 
 				animationGrid.map(Animator.class, (entity) -> entity.getAnimator()), 
-					region.relativeDirection(selectBlocksAction.getBlocks().get(1).getLocation()), 
+					region.relativeDirection(selectBlocksAction.getBlocks().get(1)), 
 					ANIMATION_DURATION, 0.6f, .3f, .1f);
 	}
 	

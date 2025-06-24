@@ -4,23 +4,23 @@ import java.util.ArrayList;
 
 import org.bukkit.entity.Player;
 
-import me.cayve.ludorium.games.GameBase;
-import me.cayve.ludorium.games.RegionTriggerManager;
-import me.cayve.ludorium.games.RegionTriggerManager.RegionTriggerListener;
 import me.cayve.ludorium.utils.locational.Region;
+import me.cayve.ludorium.utils.locational.RegionTriggerManager;
+import me.cayve.ludorium.utils.locational.RegionTriggerManager.RegionTriggerListener;
 
 public class RegionLobby extends GameLobby implements RegionTriggerListener {
 	
 	private ArrayList<Region> lobbyRegions;
 	
-	public RegionLobby(GameBase game, int minimum, int maximum) {
-		super(game, minimum, maximum);
+	public RegionLobby(int minimum, int maximum) {
+		super(minimum, maximum);
 		
 		lobbyRegions = new ArrayList<Region>();
 		
 		RegionTriggerManager.registerListener(this);
 	}
 	
+	@Override
 	public void destroy() {
 		RegionTriggerManager.unregisterListener(this);
 	}

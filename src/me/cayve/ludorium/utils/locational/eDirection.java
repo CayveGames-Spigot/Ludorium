@@ -1,6 +1,4 @@
-package me.cayve.ludorium.utils;
-
-import me.cayve.ludorium.utils.locational.Vector2DInt;
+package me.cayve.ludorium.utils.locational;
 
 public enum eDirection {
 	N(	new Vector2DInt(0, -1)), 

@@ -4,13 +4,13 @@ import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import me.cayve.ludorium.games.GameBase;
+import me.cayve.ludorium.games.boards.LudoBoard;
 import me.cayve.ludorium.games.wizards.LudoCreationWizard;
 
 public class LudoCommand extends GameCommand {
 
 	public LudoCommand() {
-		super("ludo", GameBase.class, LudoCreationWizard::new);
+		super("ludo", LudoBoard.class, LudoCreationWizard::new);
 	}
 	
 	//Allows for any child argument to be suggested

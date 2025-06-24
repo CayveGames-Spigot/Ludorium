@@ -37,7 +37,7 @@
             <configuration>
                 <target>
                     <copy file="${project.build.directory}/${project.build.finalName}.jar"
-                          tofile="C:/Users/cayma/Downloads/Ludorium Server/plugins/${project.artifactId}.jar"
+                          tofile="C:/Users/cayma/Documents/Ludorium Server/plugins/${project.artifactId}.jar"
                           overwrite="true" />
                 </target>
             </configuration>

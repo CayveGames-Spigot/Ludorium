@@ -4,11 +4,11 @@ import java.util.UUID;
 
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
-import me.cayve.ludorium.utils.eDirection;
 import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.SinWaveAnimation;
 import me.cayve.ludorium.utils.locational.Grid2D;
 import me.cayve.ludorium.utils.locational.Vector2DInt;
+import me.cayve.ludorium.utils.locational.eDirection;
 
 public class GridAnimations {
 
@@ -56,7 +56,7 @@ public class GridAnimations {
 			
 		} else { //Diagonal
 			int waveCount = animators.getWidth() + animators.getHeight() - 1;
-			
+
 			float evenAnimDur = duration / waveCount;
 			
 			//The most amount of elements in a single diagonal can only be the minimum of the lengths
@@ -67,16 +67,26 @@ public class GridAnimations {
 				
 				Timer.register(new Task(tsk).setDuration(wave * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
 					for (int i = 0; i < waveElements; i++) {
-						
+
+						//Calculate x and y position of this wave element
 						int x = waveElements - i - 1;
 						int y = currentWave - waveElements + i + 1;
 						
+						//If the minimum was the height, swap the x and y
+						if (animators.getWidth() > animators.getHeight())
+						{
+							int t = x;
+							x = y;
+							y = t;
+						}
+						
+						//Orient the x and y based on wave direction
 						x = dV.x < 0 ? x : animators.getWidth() - x - 1;
 						y = dV.y < 0 ? y : animators.getHeight() - y - 1;
-						
+
 						//.get handles out of bounds
 						if (animators.get(x, y) == null) continue;
-						
+
 						animators.get(x, y).setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
 								.setDuration(evenAnimDur + ((duration - evenAnimDur) * overlap)));
 					}

@@ -13,14 +13,15 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
-import me.cayve.ludorium.games.GameBase;
+import me.cayve.ludorium.games.boards.BoardList;
+import me.cayve.ludorium.games.boards.GameBoard;
 import me.cayve.ludorium.games.wizards.GameCreationWizard;
 import me.cayve.ludorium.ymls.TextYml;
 
 public class GameCommand {
 
 	private String label;
-	private Class<? extends GameBase> type;
+	private Class<? extends GameBoard> type;
 	private Supplier<GameCreationWizard> wizardFactory;
 	
 	/**
@@ -29,7 +30,7 @@ public class GameCommand {
 	 * @param type where the final instance will be sorted
 	 * @param wizardFactory supplier for the wizard instance
 	 */
-	public GameCommand(String label, Class<? extends GameBase> type, Supplier<GameCreationWizard> wizardFactory) {
+	public GameCommand(String label, Class<? extends GameBoard> type, Supplier<GameCreationWizard> wizardFactory) {
 		this.label = label;
 		this.type = type;
 		this.wizardFactory = wizardFactory;
@@ -58,16 +59,17 @@ public class GameCommand {
 		
 		ArgumentBuilder<CommandSourceStack, ?> instanceName = RequiredArgumentBuilder.argument("instance name", StringArgumentType.word());
 
+		instanceName.executes(ctx -> {
+			createWizard(ctx).activateWizard();
+			return 1;
+		});
+		
 		//If there are any arguments to be added (/ludorium ludo create Test manual)
 		appendCreateArguments(instanceName);
 		
 		create.then(instanceName.build());
 		
-		create.requires(sender -> sender.getSender() instanceof Player && !GameCreationWizard.isInWizard((Player) sender.getSender()));
-		create.executes(ctx -> {
-			createWizard(ctx).activateWizard();
-			return 1;
-		});
+		create.requires(sender -> sender.getSender() instanceof Player);
 		
 		return create.build();
 	}
@@ -79,22 +81,28 @@ public class GameCommand {
 	//Builds the game instance deletion command
 	private LiteralCommandNode<CommandSourceStack> buildDelete() {
 		return LiteralArgumentBuilder.<CommandSourceStack>literal("delete")
-				.then(RequiredArgumentBuilder.argument("instance name", StringArgumentType.word()))
-				.executes(ctx -> 
-				{
-					String instanceName = ctx.getArgument("instance name", String.class);
-					CommandSender sender = ctx.getSource().getSender();
-					
-					if (GameBase.deleteGameInstance(instanceName, type))
-						sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-								"commands.instanceDeleteSuccess")
-								.replace("<name>", instanceName).replace("<game>", label));
-					else //Failed to delete instance
-						sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-								"commands.instanceDeleteFailure")
-								.replace("<name>", instanceName).replace("<game>", label));
-					return 1;
-				}).build();
+				.then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("instance name", StringArgumentType.word())
+						.suggests((context, builder) -> {
+							for (String name : BoardList.getList(type))
+								builder.suggest(name);
+							return builder.buildFuture();
+						})
+						.executes(ctx -> 
+						{
+							String instanceName = ctx.getArgument("instance name", String.class);
+							CommandSender sender = ctx.getSource().getSender();
+							
+							if (BoardList.remove(instanceName, type))
+								sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
+										"commands.instanceDeleteSuccess")
+										.replace("<name>", instanceName).replace("<game>", label));
+							else //Failed to delete instance
+								sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
+										"commands.instanceDeleteFailure")
+										.replace("<name>", instanceName).replace("<game>", label));
+							return 1;
+						}).build())
+					.build();
 	}
 	
 	//Builds the game instance list command
@@ -104,8 +112,11 @@ public class GameCommand {
 			CommandSender sender = ctx.getSource().getSender();
 			
 			sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-					GameBase.getInstanceList(type).size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
+					BoardList.getList(type).size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
 					.replace("<game>", label));
+			for (String board : BoardList.getList(type))
+				sender.sendMessage(board);
+			
 			return 1;
 		}).build();
 	}

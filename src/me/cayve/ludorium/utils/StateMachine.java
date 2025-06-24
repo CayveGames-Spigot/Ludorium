@@ -22,11 +22,11 @@ public class StateMachine {
 			this.stateMachine = stateMachine;
 		}
 		
-		public void runRegress() { if (regressAction != null) regressAction.run(); }
-		public void runProgress() { if (progressAction != null) progressAction.run(); }
-		public void runAction() { if (action != null) action.run(); }
-		public void runComplete() { if (completeAction != null) completeAction.run(); }
-		public void runIncomplete() { if (incompleteAction != null) incompleteAction.run(); }
+		private void runRegress() { if (regressAction != null) regressAction.run(); }
+		private void runProgress() { if (progressAction != null) progressAction.run(); }
+		private void runAction() { if (action != null) action.run(); }
+		private void runComplete() { if (completeAction != null) completeAction.run(); }
+		private void runIncomplete() { if (incompleteAction != null) incompleteAction.run(); }
 		
 		/**
 		 * Run before action if the state has been regressed back to this state

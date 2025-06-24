@@ -1,0 +1,7 @@
+- Rewards - Vault/Economy
+- Automatically apply resource pack
+- Auto fill command args
+- Reload command
+- Items to spawn games
+	- option for only the placer can pick it up
+	- each pack can only make 1 game
