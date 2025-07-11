@@ -3,3 +3,8 @@
 # Use "#FFFFFFThis is text" for normal conversion
 # Use "<gradient #FFFFFF #000000>This is gradient text</gradient>" for gradient text
 # Use "<rainbow>This is rainbow text</rainbow>" for rainbow text
+games:
+  ludo:
+    enabled: true
+    diceRollTimeout: 5
+    selectPieceTimeout: 15

@@ -24,10 +24,10 @@ public class Timer {
 		private boolean isPaused;
 		private boolean isCanceled;
 		
-		private UUID sourceKey;
+		private String sourceKey;
 		
-		public Task() { this.sourceKey = UUID.randomUUID(); }
-		public Task(UUID sourceKey) { this.sourceKey = sourceKey; }
+		public Task() { this.sourceKey = UUID.randomUUID().toString(); }
+		public Task(String sourceKey) { this.sourceKey = sourceKey; }
 		
 		public Task setDuration(long ticks) {
 			this.duration = ticks;
@@ -156,7 +156,7 @@ public class Timer {
 			task.cancel();
 	}
 	
-	public static void cancelAllWithKey(UUID sourceKey) {
+	public static void cancelAllWithKey(String sourceKey) {
 		for (Task task : tasks)
 			if (task.sourceKey.equals(sourceKey))
 				task.cancel();

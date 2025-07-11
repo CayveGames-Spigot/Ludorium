@@ -17,7 +17,7 @@ public abstract class PlayerAction {
 	protected Consumer<PlayerAction> successCallback;
 	protected Consumer<PlayerAction> failureCallback;
 	protected Player player;
-	protected UUID tsk = UUID.randomUUID(); //ToolbarMessage source key
+	protected String tsk = UUID.randomUUID().toString(); //ToolbarMessage source key
 	
 	protected boolean isComplete = false;
 	private Task publishDelay;

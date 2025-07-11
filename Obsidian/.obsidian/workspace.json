@@ -27,12 +27,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Ludorium/Games/Ludo.md",
+                "file": "Bugs.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Ludo"
+              "title": "Bugs"
             }
           }
         ],
@@ -185,6 +185,7 @@
   },
   "active": "0979eb7a9f24271c",
   "lastOpenFiles": [
+    "Ludorium/Games/Ludo.md",
     "Bugs.md",
     "Ludorium/Backlog Ideas.md",
     "Ludorium/Config.md",
@@ -192,7 +193,6 @@
     "Ludorium/Games/Uno.md",
     "Ludorium/Games/Skip-Bo.md",
     "Ludorium/Games/Secret Hitler.md",
-    "Ludorium/Games/Ludo.md",
     "Ludorium/Games/Chess - Checkers.md",
     "Ludorium/Games/Battleship.md",
     "Ludorium/Systems/Toolbar Messages.md",

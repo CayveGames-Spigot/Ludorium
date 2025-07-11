@@ -1,7 +1,5 @@
 package me.cayve.ludorium.utils.animations.patterns;
 
-import java.util.UUID;
-
 import me.cayve.ludorium.utils.ArrayUtils;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
@@ -12,19 +10,19 @@ public class ArrayAnimations {
 
 	/**
 	 * Creates a wave effect down an array
-	 * @param tsk The task source key
+	 * @param sourceKey The task source key
 	 * @param animators
 	 * @param duration How long, from first start until last animation completes, does the animation take
 	 * @param overlap (0-1) What percent should the animations overlap (0 = no overlap, evenly spaced apart. 1 = fully overlapped, all animations trigger at the start)
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(UUID tsk, Animator[] animators, float duration, float overlap, float amplitude, float timeDelay) {
-		wave(tsk, animators, 0, duration, overlap, amplitude, timeDelay);
+	public static void wave(String sourceKey, Animator[] animators, float duration, float overlap, float amplitude, float timeDelay) {
+		wave(sourceKey, animators, 0, duration, overlap, amplitude, timeDelay);
 	}
 	/**
 	 * Creates a wave effect down an array
-	 * @param tsk The task source key
+	 * @param sourceKey The task source key
 	 * @param animators
 	 * @param startIndex Where to start the wave
 	 * @param duration How long, from first start until last animation completes, does the animation take
@@ -32,14 +30,14 @@ public class ArrayAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(UUID tsk, Animator[] animators, int startIndex, float duration, float overlap, float amplitude, float timeDelay)
+	public static void wave(String sourceKey, Animator[] animators, int startIndex, float duration, float overlap, float amplitude, float timeDelay)
 	{
-		wave(tsk, animators, startIndex, 1, duration, overlap, amplitude, timeDelay);
+		wave(sourceKey, animators, startIndex, 1, duration, overlap, amplitude, timeDelay);
 	}
 	
 	/**
 	 * Creates a wave effect down an array
-	 * @param tsk The task source key
+	 * @param sourceKey The task source key
 	 * @param animators
 	 * @param startIndex Where to start the wave
 	 * @param direction (-1, 0, 1) (-1 = Backwards) (0 = Both directions) (1 = Forward)
@@ -48,7 +46,7 @@ public class ArrayAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(UUID tsk, Animator[] animators, int startIndex, int direction, float duration, float overlap, float amplitude, float timeDelay) {
+	public static void wave(String sourceKey, Animator[] animators, int startIndex, int direction, float duration, float overlap, float amplitude, float timeDelay) {
 		int loopSize = direction == 0 ? (int)Math.ceil(animators.length / 2f) : animators.length;
 		
 		float evenAnimDur = duration / animators.length;
@@ -58,7 +56,7 @@ public class ArrayAnimations {
 				final int index = ArrayUtils.wrap(animators.length, startIndex + 
 						(i * (direction == -1 || direction == 0 && k == 1 ? -1 : 1))); //Flip the index direction if going reverse
 				
-				Timer.register(new Task(tsk).setDuration(i * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
+				Timer.register(new Task(sourceKey).setDuration(i * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
 					animators[index].setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
 							.setDuration(evenAnimDur + ((duration - evenAnimDur) * overlap)));
 				}));

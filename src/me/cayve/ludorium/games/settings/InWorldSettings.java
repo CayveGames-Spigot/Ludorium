@@ -16,7 +16,7 @@ public class InWorldSettings extends GameSettings implements Listener {
 	@EventHandler
 	private void onInteraction(PlayerInteractEntityEvent event) {
 		if (!(event.getRightClicked() instanceof Interaction)
-				|| !lobby.hasPlayer(event.getPlayer().getUniqueId())) return;
+				|| !lobby.hasPlayer(event.getPlayer().getUniqueId().toString())) return;
 		
 		//Change setting
 	}

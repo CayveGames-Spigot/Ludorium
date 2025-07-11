@@ -1,30 +1,51 @@
-package me.cayve.ludorium.games.wizards;
+package me.cayve.ludorium.games.ludo;
+
+import java.util.ArrayList;
 
 import org.bukkit.Location;
 
 import me.cayve.ludorium.actions.SelectBlocksAction;
 import me.cayve.ludorium.actions.SelectRegionAction;
-import me.cayve.ludorium.actions.SubmitAction;
-import me.cayve.ludorium.actions.SubmitAction.eResult;
 import me.cayve.ludorium.games.boards.BoardList;
-import me.cayve.ludorium.games.boards.LudoBoard;
+import me.cayve.ludorium.games.wizards.GameCreationWizard;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.ToolbarMessage;
-import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
+import me.cayve.ludorium.utils.locational.Region;
 import me.cayve.ludorium.ymls.TextYml;
 import net.md_5.bungee.api.ChatColor;
 
 public class LudoCreationWizard extends GameCreationWizard {
 
+	private class ConstructionMap {
+		private ArrayList<Location> 			tiles = new ArrayList<>();
+		private ArrayList<ArrayList<Location>> 	homes = new ArrayList<>();
+		private ArrayList<Region> 				starters = new ArrayList<>();
+		private ArrayList<Location>				safeSpaces = new ArrayList<>();
+		
+		public void setTiles(ArrayList<Location> tiles) { this.tiles = tiles; }
+		
+		public void addHomeSet(ArrayList<Location> homeSet) { this.homes.add(homeSet); }
+		public void removeLastHomeSet() { homes.removeLast(); }
+		
+		public void addStarterRegion(Region region) { this.starters.add(region); }
+		public void removeLastStarterRegion() { starters.removeLast(); }
+		
+		public void setSafeSpaces(ArrayList<Location> safeSpaces) { this.safeSpaces = safeSpaces; }
+		
+		public LudoMap constructMap() {
+			return new LudoMap(tiles, homes, starters, safeSpaces);
+		}
+	}
 	//Manual mode will force the wizard to select every board space 
 	//Otherwise, the board will attempt to find the spaces automatically
 	private boolean isSixPlayer;
-	private LudoBoard.TileLocations tiles;
+	
+	private ConstructionMap map = new ConstructionMap();
 	
 	public LudoCreationWizard() {
 		super();
 		
-		createAutomaticStates();
+		createStates();
 	}
 	
 	@Override
@@ -32,13 +53,6 @@ public class LudoCreationWizard extends GameCreationWizard {
 		super.destroy();
 		
 		stateMachine.complete();
-	}
-	
-	public LudoCreationWizard setManualMode() {
-		if (!stateMachine.hasStarted())
-			createManualStates();
-		
-		return this;
 	}
 	
 	public LudoCreationWizard setSixPlayer() {
@@ -66,41 +80,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 		return original.replace(ChatColor.stripColor(original), replaceWith);
 	}
 	
-	private void createAutomaticStates() {
-		stateMachine = new StateMachine()
-				.newState()
-					.registerProgress(this::promptColorOrderVerification)
-					.registerAction(() -> {
-						ToolbarMessage.sendQueue(player, stateTsk, TextYml.getText(player, "wizards.ludo.attemptingAutomatic"))
-							.setDuration(5);
-						
-						setNewAction(new SelectRegionAction(player, "Ludo Board", this::onCompletedAction, this::onCanceledAction));
-					}).registerComplete(() -> {
-						tiles = LudoBoard.identifyBoard(((SelectRegionAction)currentAction).getRegion(), isSixPlayer);
-							
-						if (tiles == null)
-							cancelWizard(TextYml.getText(player, "wizards.ludo.noBoardIdentified"));
-					}).buildState()
-				.newState()
-					.registerAction(() -> {
-						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.identifiedBoard")).setPermanent();
-						tiles.animate();
-						
-						setNewAction(new SubmitAction(player, eResult.BOTH, this::onCompletedAction, this::onCanceledAction));
-					})
-					.registerComplete(() -> {
-						ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.created")).setType(eType.SUCCESS);
-						
-						createGame();
-					})
-					.registerIncomplete(() -> {
-						tiles.destroy();
-						
-						cancelWizard();
-					}).buildState();
-	}
-	
-	private void createManualStates() {
+	private void createStates() {
 		stateMachine = new StateMachine()
 			/*
 			 * Select tiles
@@ -114,15 +94,16 @@ public class LudoCreationWizard extends GameCreationWizard {
 					setNewAction(new SelectBlocksAction(player, -1, false, this::onCompletedAction, this::onCanceledAction));
 				})
 				.registerComplete(() -> {
-					tiles = new LudoBoard.TileLocations();
-					
-					tiles.tiles = ((SelectBlocksAction) currentAction).getLocations();
+					map.setTiles(((SelectBlocksAction) currentAction).getLocations());
 				}).buildState()
 				
 			/*
 			 * Select homes
 			 */
 			.newState("HOME SELECTION")
+				.registerRegress(() -> {
+					map.removeLastHomeSet();
+				})
 				.registerAction(() -> {
 					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectHome")
 							.replace("<color>", 
@@ -134,8 +115,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 				.registerComplete(() -> {
 					ToolbarMessage.clearAllFromSource(stateTsk);
 					
-					for (Location location : ((SelectBlocksAction) currentAction).getLocations())
-						tiles.homeTiles.add(location);
+					map.addHomeSet(((SelectBlocksAction) currentAction).getLocations());
 				}).buildState()
 				
 			.copyState("HOME SELECTION").buildState()
@@ -152,7 +132,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 			 */
 			stateMachine.newState("STARTER REGION")
 				.registerRegress(() -> {
-					tiles.centerPlates.remove(tiles.centerPlates.size() - 1);
+					map.removeLastStarterRegion();
 				})
 				.registerAction(() -> {
 					setNewAction(new SelectRegionAction(player, 
@@ -162,7 +142,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 							this::onCompletedAction, this:: onCanceledAction));
 				})
 				.registerComplete(() -> {
-					tiles.centerPlates.add(((SelectRegionAction) currentAction).getRegion());	
+					map.addStarterRegion(((SelectRegionAction) currentAction).getRegion());
 				}).buildState()
 				
 			.copyState("STARTER REGION").buildState()
@@ -178,7 +158,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 	
 	private void createGame() {
 		
-		BoardList.save(new LudoBoard(instanceName, tiles, isSixPlayer));
+		BoardList.save(new LudoBoard(instanceName, map.constructMap(), map.tiles.getFirst()));
 		
 		completeWizard();
 	}

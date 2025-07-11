@@ -27,8 +27,8 @@ public abstract class GameCreationWizard implements Listener {
 	protected PlayerAction currentAction;
 	protected Player player;
 	protected String instanceName;
-	protected UUID tsk = UUID.randomUUID(); //ToolbarMessage source key
-	protected UUID stateTsk = UUID.randomUUID(); //Tsk specifically for state messages
+	protected String tsk = UUID.randomUUID().toString(); //ToolbarMessage source key
+	protected String stateTsk = UUID.randomUUID().toString(); //Tsk specifically for state messages
 	
 	protected PlayerAction delayedAction; //If onComplete should be delayed, cache the action that was completed
 	protected Task onCompleteDelay;

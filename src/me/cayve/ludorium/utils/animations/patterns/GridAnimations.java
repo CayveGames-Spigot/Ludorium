@@ -1,7 +1,5 @@
 package me.cayve.ludorium.utils.animations.patterns;
 
-import java.util.UUID;
-
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.animations.Animator;
@@ -14,7 +12,7 @@ public class GridAnimations {
 
 	/**
 	 * Utilizes @SinWaveAnimation to create a wave effect
-	 * @param tsk The task source key
+	 * @param sourceKey The task source key
 	 * @param animators The grid of animators
 	 * @param direction The direction the wave starts from. (North-East simply means the 0,0 of the grid array)
 	 * @param duration How long, from first start until last animation completes, does the animation take
@@ -22,7 +20,7 @@ public class GridAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(UUID tsk, Grid2D<Animator> animators, eDirection side, float duration, float overlap, float amplitude, float timeDelay) {
+	public static void wave(String sourceKey, Grid2D<Animator> animators, eDirection side, float duration, float overlap, float amplitude, float timeDelay) {
 		Vector2DInt dV = side.getVector();
 		
 		if (side.isCardinal()) { //Not diagonal
@@ -37,7 +35,7 @@ public class GridAnimations {
 			for (int wave = 0; wave < (isColWave ? width : height); wave++) {
 				final int currentWave = wave; //Allows use in lambda
 				
-				Timer.register(new Task(tsk).setDuration(wave * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
+				Timer.register(new Task(sourceKey).setDuration(wave * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
 					//Loops through opposite direction
 					for (int i = 0; i < (isColWave ? height : width); i++) {
 						//If the wave is with rows, x is i
@@ -65,7 +63,7 @@ public class GridAnimations {
 			for (int wave = 0; wave < waveCount; wave++) {
 				final int currentWave = wave; //Allows use in lambda
 				
-				Timer.register(new Task(tsk).setDuration(wave * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
+				Timer.register(new Task(sourceKey).setDuration(wave * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
 					for (int i = 0; i < waveElements; i++) {
 
 						//Calculate x and y position of this wave element

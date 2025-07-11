@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.function.Predicate;
 
 import org.bukkit.Sound;
@@ -29,9 +28,9 @@ public class ToolbarMessage {
 		private boolean refreshEveryTick;
 		private boolean showDuration;
 		private eType type;
-		private UUID sourceKey;
+		private String sourceKey;
 		
-		public Message(String message, UUID sourceKey) {
+		public Message(String message, String sourceKey) {
 			this.message = message;
 			this.sourceKey = sourceKey;
 		}
@@ -198,7 +197,7 @@ public class ToolbarMessage {
 	 * Clears all messages with the given source key
 	 * @param sourceKey The source key to compare
 	 */
-	public static void clearAllFromSource(UUID sourceKey) {
+	public static void clearAllFromSource(String sourceKey) {
 		clearIf(testMessage -> testMessage.sourceKey != null && testMessage.sourceKey.equals(sourceKey));
 	}
 	
@@ -256,7 +255,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message clearSourceAndSend(Player player, UUID source, String message) {
+	public static Message clearSourceAndSend(Player player, String source, String message) {
 		clearAllFromSource(source);
 		
 		return sendQueue(player, source, message);
@@ -271,7 +270,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message clearSourceAndSendImmediate(Player player, UUID source, String message) {
+	public static Message clearSourceAndSendImmediate(Player player, String source, String message) {
 		clearAllFromSource(source);
 		
 		return sendImmediate(player, source, message);
@@ -304,7 +303,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendImmediate(Player player, UUID source, String message) {
+	public static Message sendImmediate(Player player, String source, String message) {
 		if (!messageQueues.containsKey(player))
 			messageQueues.put(player, new ArrayList<ActiveMessage>());
 		
@@ -326,7 +325,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendQueue(Player player, UUID source, String message) {
+	public static Message sendQueue(Player player, String source, String message) {
 		if (!messageQueues.containsKey(player))
 			return sendImmediate(player, source, message);
 		

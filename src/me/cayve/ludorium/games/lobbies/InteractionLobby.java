@@ -79,9 +79,9 @@ public class InteractionLobby extends GameLobby {
 	
 	private void onInteraction(Player player, int index) {
 		if (index == -1)
-			attemptLobbyJoin(player);
+			attemptLobbyJoin(player.getUniqueId().toString());
 		else
-			attemptLobbyJoin(player, index);
+			attemptLobbyJoin(player.getUniqueId().toString(), index);
 	}
 	
 	@Override

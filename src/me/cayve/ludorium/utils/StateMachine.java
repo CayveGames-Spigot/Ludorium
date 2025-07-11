@@ -100,6 +100,8 @@ public class StateMachine {
 	private boolean isComplete = false;
 	
 	public int getStateIndex() { return index; }
+	public boolean isCurrentState(String stateID) { return states.get(index).ID.equals(stateID); }
+	
 	public boolean hasStarted() { return index != -1; }
 	/**
 	 * Creates a new state.

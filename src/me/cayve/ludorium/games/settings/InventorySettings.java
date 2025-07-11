@@ -39,7 +39,7 @@ public class InventorySettings extends GameSettings implements Listener {
 		if (!inventory.equals(event.getInventory())
 				|| !(event.getPlayer() instanceof Player)) return;
 		
-		lobby.attemptLobbyLeave((Player) event.getPlayer());
+		lobby.attemptLobbyLeave(event.getPlayer().getUniqueId().toString());
 	}
 	
 	private void onLobbyJoin(Player player) 

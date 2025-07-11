@@ -6,14 +6,14 @@ import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
-import me.cayve.ludorium.commands.LudoCommand;
 import me.cayve.ludorium.commands.LudoriumCommand;
 import me.cayve.ludorium.games.boards.BoardList;
+import me.cayve.ludorium.games.ludo.LudoCommand;
 import me.cayve.ludorium.games.wizards.GameCreationWizard;
+import me.cayve.ludorium.utils.PlayerStateManager;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.entities.LudoriumEntity;
-import me.cayve.ludorium.utils.locational.RegionTriggerManager;
 
 public class LudoriumPlugin extends JavaPlugin {
 
@@ -54,7 +54,7 @@ public class LudoriumPlugin extends JavaPlugin {
 		LudoriumEntity.initialize();
 		Timer.initialize();
 		ToolbarMessage.initialize();
-		RegionTriggerManager.initialize();
+		PlayerStateManager.initialize();
 	}
 	public void reloadPlugin() 
 	{
@@ -67,5 +67,6 @@ public class LudoriumPlugin extends JavaPlugin {
 		BoardList.destroyAll();
 		
 		LudoriumCommand.uninitialize();
+		PlayerStateManager.uninitialize();
 	}
 }
