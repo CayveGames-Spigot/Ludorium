@@ -1,11 +1,10 @@
 package me.cayve.ludorium.games.ludo;
 
 import java.util.ArrayList;
+import java.util.UUID;
 
 import org.bukkit.Location;
-import org.bukkit.block.Block;
 
-import me.cayve.ludorium.games.boards.BlockTileMap;
 import me.cayve.ludorium.utils.locational.LocationUtil;
 import me.cayve.ludorium.utils.locational.Region;
 import me.cayve.ludorium.utils.locational.Vector3D;
@@ -27,25 +26,31 @@ public class LudoMap {
 
 	private static int 	HOME_TILE_COUNT = 4,
 						STARTER_TILE_COUNT = 4;
+	
+	private String mapID;
 
 	private Vector3D[] relativeLocations;
+	private ArrayList<Integer> safeSpaceIndexes = new ArrayList<>();
 	
 	private int tileCount;
 	private int colorCount;
 	
-	public LudoMap(Vector3D[] relativeMap, int tileCount, boolean isSixPlayers) {
+	public LudoMap(Vector3D[] relativeMap, String mapID, int tileCount, boolean isSixPlayers) {
 		this.relativeLocations = relativeMap;
+		this.mapID = mapID;
 		
 		this.tileCount = tileCount;
 		this.colorCount = isSixPlayers ? 6 : 4;
 	}
 	
 	public LudoMap(ArrayList<Location> tiles, ArrayList<ArrayList<Location>> homes, ArrayList<Region> starters, ArrayList<Location> safeSpaces) {
+		this.mapID = UUID.randomUUID().toString();
+		
 		this.tileCount = tiles.size();
 		this.colorCount = starters.size();
 		
 		relativeLocations = new Vector3D[tiles.size() + (homes.size() * HOME_TILE_COUNT) + 
-		                                 (starters.size() * STARTER_TILE_COUNT) + safeSpaces.size()];
+		                                 (starters.size() * STARTER_TILE_COUNT)];
 		
 		Location origin = tiles.getFirst(); //Should always be the red out tile
 		
@@ -60,23 +65,32 @@ public class LudoMap {
 		
 		//Determines relative location for all starter positions
 		for (int i = 0; i < starters.size(); i++) {
+			float length = starters.get(i).getXLength() / 4f; //Centers the 4 pieces halfway between the center and the edge
+			Location center = starters.get(i).getCenter();
+
 			//Calculates all relative corners of the starter region
 			relativeLocations[getStarterIndex(i, 0)] = calculateRelativity(origin, 
-					starters.get(i).getMinimum());
+					LocationUtil.relativeLocation(center, length, 0, length));
 			relativeLocations[getStarterIndex(i, 1)] = calculateRelativity(origin, 
-					LocationUtil.relativeLocation(starters.get(i).getMinimum(), 1, 0, 0));
+					LocationUtil.relativeLocation(center, -length, 0, length));
 			relativeLocations[getStarterIndex(i, 2)] = calculateRelativity(origin, 
-					LocationUtil.relativeLocation(starters.get(i).getMinimum(), 0, 0, 1));
+					LocationUtil.relativeLocation(center, length, 0, -length));
 			relativeLocations[getStarterIndex(i, 3)] = calculateRelativity(origin, 
-					LocationUtil.relativeLocation(starters.get(i).getMinimum(), 1, 0, 1));
+					LocationUtil.relativeLocation(center, -length, 0, -length));
 		}
 		
 		//Determines relative location for all safe spaces
-		int safeSpaceStartIndex = getStarterIndex(colorCount, STARTER_TILE_COUNT);
-		
-		for (int i = 0; i < relativeLocations.length; i++)
-			relativeLocations[safeSpaceStartIndex + i] = calculateRelativity(origin, safeSpaces.get(i));
+		for (int i = 0; i < safeSpaces.size(); i++) {
+			Vector3D safeSpace = calculateRelativity(origin, safeSpaces.get(i));
+			
+			for (int j = 0; j < getMapSize(); j++)
+				if (relativeLocations[j].equals(safeSpace))
+					this.safeSpaceIndexes.add(j);
+		}
+
 	}
+	
+	public String getMapID() { return mapID; }
 	
 	public int getHomeIndex(int color, int index) {
 		return getTileIndex(tileCount) + (color * HOME_TILE_COUNT) + index;
@@ -87,7 +101,13 @@ public class LudoMap {
 	}
 	
 	public int getStarterIndex(int color, int index) {
-		return getHomeIndex(colorCount, HOME_TILE_COUNT) + (color * STARTER_TILE_COUNT) + index;
+		return getHomeIndex(colorCount, 0) + (color * STARTER_TILE_COUNT) + index;
+	}
+	
+	public Location getStarterCenter(Location origin, int color) {
+		return LocationUtil.relativeLocation(new Region(
+				getWorldLocation(origin, getStarterIndex(color, 0)), 
+				getWorldLocation(origin, getStarterIndex(color, 3)), false).getCenter(), 0, 0.5f, 0); //Add 0.5f because getCenter will get the center of y too
 	}
 	
 	public Location getWorldLocation(Location origin, int index) {
@@ -95,32 +115,25 @@ public class LudoMap {
 	}
 	
 	public boolean isSafeSpace(int index) {
-		int safeSpaceIndex = getStarterIndex(colorCount, STARTER_TILE_COUNT);
-		
-		while (safeSpaceIndex < relativeLocations.length) {
-			if (relativeLocations[safeSpaceIndex].equals(relativeLocations[index])) {
-				return true;
-			}
-			safeSpaceIndex++;
-		}
-		
-		return false;
+		return safeSpaceIndexes.contains(index);
 	}
 	
 	public boolean isSixPlayers() { return colorCount == 6; }
+	public int getTileCount() { return tileCount; }
+	public Vector3D[] getRelativeLocations() { return relativeLocations; }
 	public int getColorCount() { return colorCount; }
-	public int getMapSize() { return getStarterIndex(colorCount, STARTER_TILE_COUNT); }
+	public int getMapSize() { return relativeLocations.length; }
 	
 	public int getStartTile(int colorIndex) { return (tileCount / getColorCount()) * colorIndex; }
 	public int getEndTile(int colorIndex) { return Math.floorMod(getStartTile(colorIndex) - 1, tileCount); }
 	
-	public BlockTileMap constructBlockTileMap(Location origin) {
-		Block[] blocks = new Block[getMapSize()];
+	public Location[] mapFromOrigin(Location origin) {
+		Location[] locations = new Location[getMapSize()];
 		
 		for (int i = 0; i < getMapSize(); i++)
-			blocks[i] = getWorldLocation(origin, i).getBlock();
+			locations[i] = getWorldLocation(origin, i);
 		
-		return new BlockTileMap(blocks);
+		return locations;
 	}
 	
 	private Vector3D calculateRelativity(Location origin, Location target) {

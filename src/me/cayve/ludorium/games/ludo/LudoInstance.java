@@ -3,9 +3,12 @@ package me.cayve.ludorium.games.ludo;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.function.Consumer;
 
 import me.cayve.ludorium.games.GameInstance;
+import me.cayve.ludorium.games.events.DiceRollEvent;
+import me.cayve.ludorium.games.events.TokenMoveEvent;
+import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
+import me.cayve.ludorium.games.ludo.events.PieceBlunderEvent;
 
 /**
  * @author Cayve
@@ -18,7 +21,6 @@ import me.cayve.ludorium.games.GameInstance;
  * (No world interaction integration should be present)
  */
 public class LudoInstance extends GameInstance {
-
 	//Game options
 	private boolean safeSpaces, homeLineup, forceCapture;
 	
@@ -38,7 +40,6 @@ public class LudoInstance extends GameInstance {
 	private ArrayList<String> completedPieces = new ArrayList<>();
 	
 	private Runnable onInstanceUpdate; //Called during any internal update
-	private ArrayList<Consumer<String>> onForceCaptureBlunder = new ArrayList<>(); //PieceID that was blundered
 	
 	public LudoInstance(Runnable onInstanceUpdate, ArrayList<Integer> activePlayerIndexes, LudoMap map,
 			boolean safeSpaces, boolean homeLineup, boolean forceCapture) {
@@ -71,6 +72,7 @@ public class LudoInstance extends GameInstance {
 	
 	public void roll(int rollValue) {
 		currentRoll = rollValue;
+		logger.logEvent(new DiceRollEvent(getCurrentPlayerIndex(), rollValue));
 	}
 	
 	/**
@@ -128,7 +130,7 @@ public class LudoInstance extends GameInstance {
 	 * @param playerIndex
 	 */
 	public void removePlayer(int playerIndex) {
-		replacePiece(playerIndex + "", null);
+		removePiece(playerIndex + "");
 		
 		boolean isRemovedPlayersTurn = currentTurn == activePlayerIndexes.indexOf(playerIndex);
 		
@@ -151,11 +153,16 @@ public class LudoInstance extends GameInstance {
 	 */
 	public int getWinnerPlayerIndex() { return winnerPlayerIndex; }
 	
-	public void registerOnForceCaptureBlunderEvent(Consumer<String> listener) { onForceCaptureBlunder.add(listener); }
-	
 	private boolean doesPieceMatchCurrentPlayer(String pieceID) { return getPlayerIndexFromPiece(pieceID) == getCurrentPlayerIndex(); }
 	private int getPlayerIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(0)); }
-	private int getPieceIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2)); }
+	private int getPieceNumberFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2)); }
+	
+	private int getPieceIndex(String pieceID) {
+		for (int i = 0; i < board.length; i++)
+			if (board[i].equals(pieceID))
+				return i;
+		return -1;
+	}
 	
 	/**
 	 * Finds the targeted tile index of the given piece
@@ -165,37 +172,59 @@ public class LudoInstance extends GameInstance {
 	 * @return The index of the targeted tile (-1 if invalid move)
 	 */
 	private int getPieceTarget(String pieceID, boolean movePiece) {
+		//This keeps track of the path the piece takes, if it moves
+		ArrayList<Integer> path = new ArrayList<>();
+		
 		//First, check if piece is still at start
 		for (int i = 0; i < 4; i++) {
-			if (!board[map.getStarterIndex(getCurrentPlayerIndex(), i)].equals(pieceID))
+			int boardIndex = map.getStarterIndex(getCurrentPlayerIndex(), i);
+			if (!board[boardIndex].equals(pieceID))
 				continue;
 			
 			if (currentRoll != 6)
 				return -1;
 			
-			return moveToBoardTile(map.getStartTile(getCurrentPlayerIndex()), pieceID, movePiece);
+			path.add(boardIndex);
+			return moveToBoardTile(map.getStartTile(getCurrentPlayerIndex()), pieceID, movePiece, path);
 		}
 		
 		//Second, check if piece is in home
 		for (int i = 0; i < 4; i++)
-			if (board[map.getHomeIndex(getCurrentPlayerIndex(), i)].equals(pieceID))
-				return moveDownHomeStretch(i, currentRoll, pieceID, movePiece);
+		{
+			int boardIndex = map.getHomeIndex(getCurrentPlayerIndex(), i);
+			
+			if (board[boardIndex].equals(pieceID)) {
+
+				return moveDownHomeStretch(i, currentRoll, pieceID, movePiece, path);
+			}
+		}
 		
 		//Otherwise, piece is on main board
 		for (int i = 0; i < board.length; i++) {
+			int boardIndex = map.getTileIndex(i);
+			
 			if (!board[i].equals(pieceID))
 				continue;
 			
-			if (i + currentRoll > map.getEndTile(getCurrentPlayerIndex()))
-				return moveDownHomeStretch(-1, currentRoll - (map.getEndTile(getCurrentPlayerIndex()) - i), pieceID, movePiece);
+			if (boardIndex + currentRoll > map.getEndTile(getCurrentPlayerIndex()))
+			{
+				populatePath(path, boardIndex, boardIndex - map.getEndTile(getCurrentPlayerIndex()));
+				return moveDownHomeStretch(-1, currentRoll - (boardIndex - (map.getEndTile(getCurrentPlayerIndex()))), pieceID, movePiece, path);
+			}
 			
-			return moveToBoardTile(i + currentRoll, pieceID, movePiece);
+			populatePath(path, boardIndex, currentRoll - 1); //- 1 because moveToBoardTile handles last position
+			return moveToBoardTile(boardIndex + currentRoll, pieceID, movePiece, path);
 		}
 		
 		return -1;
 	}
 	
-	private int moveToBoardTile(int tileIndex, String pieceID, boolean movePiece) {
+	private void populatePath(ArrayList<Integer> path, int start, int count) {
+		for (int i = start; i < start + count; i++)
+			path.add(i);
+	}
+	
+	private int moveToBoardTile(int tileIndex, String pieceID, boolean movePiece, ArrayList<Integer> path) {
 		if (!board[tileIndex].isEmpty() && doesPieceMatchCurrentPlayer(board[tileIndex]))
 			return -1;
 		
@@ -206,14 +235,17 @@ public class LudoInstance extends GameInstance {
 			return tileIndex;
 		
 		if (!board[tileIndex].isEmpty())
-			returnPieceToStart(board[tileIndex]);
+			returnPieceToStart(board[tileIndex], eAction.CAPTURE);
 		
-		replacePiece(pieceID, null);
+		path.add(tileIndex);
+		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
+		
+		removePiece(pieceID);
 		board[tileIndex] = pieceID;
 		return tileIndex;
 	}
 	
-	private int moveDownHomeStretch(int startingPos, int moveAmount, String pieceID, boolean movePiece) {
+	private int moveDownHomeStretch(int startingPos, int moveAmount, String pieceID, boolean movePiece, ArrayList<Integer> path) {
 		//If the roll overshoots the last tile at all
 		if (startingPos + moveAmount > 4)
 			return -1;
@@ -232,8 +264,11 @@ public class LudoInstance extends GameInstance {
 					if (!movePiece)
 						return tempIndex;
 					
+					populatePath(path, startingPos, j);
+					logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
+					
 					completedPieces.add(pieceID);
-					replacePiece(pieceID, null);
+					removePiece(pieceID);
 					return tempIndex;
 				}
 				else
@@ -250,51 +285,44 @@ public class LudoInstance extends GameInstance {
 		if (!movePiece)
 			return homeIndex;
 		
-		replacePiece(pieceID, null);
+		populatePath(path, startingPos, moveAmount);
+		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
+		
+		removePiece(pieceID);
 		board[homeIndex] = pieceID;
 		return homeIndex;
 	}
 	
 	/**
-	 * Replaces the piece's location with the given replacement.
-	 * This does not place the replaced piece at a new location.
+	 * Sets the piece's current location to empty.
+	 * This does not place the piece at a new location.
 	 * The search uses startsWith logic, so player indexes can be used to 
 	 * replace ALL of a player's pieces. (Since pieceIDs start with player index)
 	 * @param pieceID The piece to replace
 	 * @param replaceWith The piece to replace with (null to empty the tile)
+	 * @return the index the piece was at
 	 */
-	private void replacePiece(String pieceID, String replaceWith) {
-		if (replaceWith == null)
-			replaceWith = "";
-		
-		//Checks board tiles
-		for (int i = 0; i < board.length; i++) {
+	private void removePiece(String pieceID) {
+		for (int i = 0; i < board.length; i++)
 			if (board[i].startsWith(pieceID))
-				board[i] = replaceWith;
-		}
-		
-		//Checks home and starter tiles
-		for (int i = 0; i < activePlayerIndexes.size(); i++) {
-			for (int j = 0; j < 4; j++) {
-				if (board[map.getHomeIndex(i, j)].startsWith(pieceID))
-					board[map.getHomeIndex(i, j)] = replaceWith;
-				if (board[map.getStarterIndex(i, j)].startsWith(pieceID))
-					board[map.getStarterIndex(i, j)] = replaceWith;
-			}
-		}
+				board[i] = "";
 	}
 	
 	/**
 	 * Returns the given piece to its starter
 	 * @param pieceID 
 	 */
-	private void returnPieceToStart(String pieceID) {
-		replacePiece(pieceID, null);
+	private void returnPieceToStart(String pieceID, eAction action) {
+		int pieceIndex = getPieceIndex(pieceID);
+		removePiece(pieceID);
 		
 		int playerIndex = getPlayerIndexFromPiece(pieceID);
 		for (int i = 0; i < 4; i++) {
 			if (board[map.getStarterIndex(playerIndex, i)].isEmpty()) {
-				board[map.getStarterIndex(playerIndex, i)] = pieceID;
+				int starterIndex = map.getStarterIndex(playerIndex, i);
+				board[starterIndex] = pieceID;
+				
+				logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, action, pieceIndex, starterIndex));
 				return;
 			}
 		}
@@ -313,7 +341,7 @@ public class LudoInstance extends GameInstance {
 	
 	private void checkForceCapture(String pieceID) {
 		for (int i = 0; i < 4; i++) {
-			if (getPieceIndexFromPiece(pieceID) == i)
+			if (getPieceNumberFromPiece(pieceID) == i)
 				continue;
 			
 			String tempID = getCurrentPlayerIndex() + "-" + i;
@@ -323,10 +351,9 @@ public class LudoInstance extends GameInstance {
 				//Force capture has been blundered
 				
 				//Return the blundered piece
-				returnPieceToStart(tempID);
+				returnPieceToStart(tempID, eAction.BLUNDER);
 				
-				for (Consumer<String> event : onForceCaptureBlunder)
-					event.accept(tempID);;
+				logger.logEvent(new PieceBlunderEvent(getCurrentPlayerIndex(), tempID));
 				return;
 			}
 		}

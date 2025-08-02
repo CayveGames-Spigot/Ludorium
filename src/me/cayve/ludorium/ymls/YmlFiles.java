@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.util.logging.Level;
 
 import org.bukkit.configuration.file.FileConfiguration;
@@ -22,6 +21,23 @@ public class YmlFiles {
 			this.textFile = textFile;
 			this.customConfig = customConfig;
 		}
+		
+		public void clear() {
+			for (String key : customConfig.getKeys(false))
+				customConfig.set(key, null);
+		}
+		
+		public void save() {
+			try {
+				if (customConfig.getKeys(false).isEmpty())
+						textFile.delete();
+				else
+					customConfig.save(textFile);
+			} catch (IOException e) {
+				LudoriumPlugin.getPlugin().getLogger().log(Level.SEVERE,
+						"Could not save config to " + textFile.getName(), e);
+			}
+		}
 	}
 	
 	public static boolean exists(String fileName) {
@@ -36,33 +52,35 @@ public class YmlFiles {
 
 	public static YmlFileInfo reload(String fileName) {
 		YmlFileInfo info = null;
+		
 		try {
+			
 			File textFile = new File(LudoriumPlugin.getPlugin().getDataFolder(), fileName);
+			
 			textFile.getParentFile().mkdirs();
+			
 			FileConfiguration customConfig = YamlConfiguration.loadConfiguration(textFile);
+			
 			info = new YmlFileInfo(textFile, customConfig);
+			
 			Reader defConfigStream = new InputStreamReader(LudoriumPlugin.getPlugin().getResource(fileName),
 					"UTF8");
+			
 			if (defConfigStream != null) {
 				YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+				
 				customConfig.setDefaults(defConfig);
 				customConfig.options().copyDefaults(true);
-				save(info);
+				
+				info.save();
 			}
-		} catch (UnsupportedEncodingException e) {
+		}
+		catch (NullPointerException e) {
+			//Don't print error if the file is missing, that's normal
+		}
+		catch (Exception e) {
 			e.printStackTrace();
-		} catch (Exception e) {
-
 		}
 		return info;
-	}
-
-	public static void save(YmlFileInfo info) {
-		try {
-			info.customConfig.save(info.textFile);
-		} catch (IOException e) {
-			LudoriumPlugin.getPlugin().getLogger().log(Level.SEVERE,
-					"Could not save config to " + info.textFile.getName(), e);
-		}
 	}
 }

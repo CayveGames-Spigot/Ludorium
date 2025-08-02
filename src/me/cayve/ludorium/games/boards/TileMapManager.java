@@ -9,7 +9,7 @@ import me.cayve.ludorium.utils.Whitelist;
 
 public class TileMapManager {
 
-	private ArrayList<TileMap> tileMaps;
+	private ArrayList<TileMap> tileMaps = new ArrayList<>();
 	private Consumer<Integer> onTileInteraction;
 	private Whitelist<Player> whitelistedPlayers = new Whitelist<>();
 	private Whitelist<Integer> whitelistedTiles = new Whitelist<>();
@@ -38,5 +38,6 @@ public class TileMapManager {
 	public void destroy() {
 		for (TileMap map : tileMaps)
 			map.destroy();
+		tileMaps.clear();
 	}
 }

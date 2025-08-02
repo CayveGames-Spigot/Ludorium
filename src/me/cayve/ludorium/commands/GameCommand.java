@@ -83,7 +83,7 @@ public class GameCommand {
 		return LiteralArgumentBuilder.<CommandSourceStack>literal("delete")
 				.then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("instance name", StringArgumentType.word())
 						.suggests((context, builder) -> {
-							for (String name : BoardList.getList(type))
+							for (String name : BoardList.getNameList(type))
 								builder.suggest(name);
 							return builder.buildFuture();
 						})
@@ -112,9 +112,9 @@ public class GameCommand {
 			CommandSender sender = ctx.getSource().getSender();
 			
 			sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-					BoardList.getList(type).size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
+					BoardList.getNameList(type).size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
 					.replace("<game>", label));
-			for (String board : BoardList.getList(type))
+			for (String board : BoardList.getNameList(type))
 				sender.sendMessage(board);
 			
 			return 1;

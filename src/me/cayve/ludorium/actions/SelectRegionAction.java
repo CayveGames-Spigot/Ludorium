@@ -71,7 +71,7 @@ public class SelectRegionAction extends PlayerAction {
 	{
 		//Create the region and publish action
 		ArrayList<Block> selectedBlocks = selectBlocksAction.getBlocks();
-		region = new Region(selectedBlocks.get(0).getLocation(), selectedBlocks.get(1).getLocation());
+		region = new Region(selectedBlocks.get(0).getLocation(), selectedBlocks.get(1).getLocation(), true);
 		
 		animateCompletion();
 		

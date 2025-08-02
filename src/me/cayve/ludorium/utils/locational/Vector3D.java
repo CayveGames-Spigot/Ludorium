@@ -1,6 +1,11 @@
 package me.cayve.ludorium.utils.locational;
 
-public class Vector3D {
+import java.util.HashMap;
+import java.util.Map;
+
+import org.bukkit.configuration.serialization.ConfigurationSerializable;
+
+public class Vector3D implements ConfigurationSerializable {
 	public float x;
 	public float y;
 	public float z;
@@ -31,5 +36,20 @@ public class Vector3D {
 	@Override
 	public String toString() {
 		return "[ " + x + ", " + y + ", " + z + " ]";
+	}
+	
+	@Override
+	public Map<String, Object> serialize() {
+		Map<String, Object> map = new HashMap<>();
+		
+		map.put("x", x);
+		map.put("y", y);
+		map.put("z", z);
+		
+		return map;
+	}
+	
+	public static Vector3D deserialize(Map<String, Object> map) {
+		return new Vector3D((float)((double)map.get("x")), (float)((double)map.get("y")), (float)((double)map.get("z")));
 	}
 }

@@ -28,7 +28,7 @@ public class InventorySettings extends GameSettings implements Listener {
 	@EventHandler
 	private void onInventoryClick(InventoryClickEvent event) {
 		if (!inventory.equals(event.getInventory())
-				|| !lobby.getHost().equals(event.getWhoClicked().getUniqueId())) return;
+				|| !lobby.getHost().equals(event.getWhoClicked().getUniqueId().toString())) return;
 		
 		//Update settings
 		//Start game if possible

@@ -13,7 +13,6 @@ public abstract class GameBoard {
 	
 	private HashMap<String, Integer> missedTurns = new HashMap<>();
 	private int missedTurnsAllowance = 2;
-	//private GameInstance gameInstance;
 	
 	public GameBoard(String name) {
 		boardName = name;
@@ -32,7 +31,7 @@ public abstract class GameBoard {
 	public void destroy() {
 		lobby.destroy();
 	}
-	
+
 	protected abstract void startGame();
 	protected abstract void endGame();
 	
@@ -68,5 +67,4 @@ public abstract class GameBoard {
 	 * @param allowance
 	 */
 	protected void setMissedTurnAllowance(int allowance) { missedTurnsAllowance = allowance; }
-	
 }

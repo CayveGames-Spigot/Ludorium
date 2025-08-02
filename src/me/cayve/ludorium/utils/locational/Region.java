@@ -8,16 +8,17 @@ import org.bukkit.block.Block;
 import me.cayve.ludorium.utils.entities.BlockEntity;
 
 public class Region {
-	private int xLength, yLength, zLength;
+	private float xLength, yLength, zLength;
 	private Location minimum, maximum;
 	
-	public Region(Location cornerOne, Location cornerTwo) {
+	public Region(Location cornerOne, Location cornerTwo, boolean isBlockCoordinate) {
 		this.minimum = LocationUtil.bottomNorthWestCorner(cornerOne, cornerTwo);
 		this.maximum = LocationUtil.upperSouthEastCorner(cornerOne, cornerTwo);
 		
-		xLength = maximum.getBlockX() - minimum.getBlockX() + 1;
-		yLength = maximum.getBlockY() - minimum.getBlockY() + 1;
-		zLength = maximum.getBlockZ() - minimum.getBlockZ() + 1;
+		int adjustment = isBlockCoordinate ? 1 : 0;
+		xLength = (float)(maximum.getX() - minimum.getX()) + adjustment;
+		yLength = (float)(maximum.getY() - minimum.getY()) + adjustment;
+		zLength = (float)(maximum.getZ() - minimum.getZ()) + adjustment;
 	}
 	
 	public boolean isInRegion(Location location) {
@@ -26,19 +27,20 @@ public class Region {
 				&& location.getZ() >= minimum.getZ() && location.getZ() <= maximum.getZ();
 	}
 	
-	public int getXLength() { return xLength; }
-	public int getYLength() { return yLength; }
-	public int getZLength() { return zLength; }
-	public int getArea() { return xLength * yLength * zLength; }
+	public float getXLength() { return xLength; }
+	public float getYLength() { return yLength; }
+	public float getZLength() { return zLength; }
+	public float getArea() { return xLength * yLength * zLength; }
 	public Location getMinimum() { return minimum; }
 	public Location getMaximum() { return maximum; }
 	
 	/**
-	 * Returns the 3D grid of locations between the minimum and maximum point of this region
+	 * Returns the 3D grid of block locations between the minimum and maximum point of this region
 	 * @return
 	 */
 	public Grid3D<Location> get3DLocationGrid() {
-		Grid3D<Location> grid = new Grid3D<Location>(Location.class, xLength, yLength, zLength);
+		Grid3D<Location> grid = new Grid3D<Location>(Location.class, 
+				(int)Math.floor(xLength), (int)Math.floor(yLength), (int)Math.floor(zLength));
 		
 		for (int x = 0; x < xLength; x++) {
 			for (int y = 0; y < yLength; y++) {
@@ -57,7 +59,7 @@ public class Region {
 	 * @return [x][z]
 	 */
 	public Grid2D<Location> get2DLocationGrid() {
-		Grid2D<Location> grid = new Grid2D<Location>(Location.class, xLength, zLength);
+		Grid2D<Location> grid = new Grid2D<Location>(Location.class, (int)Math.floor(xLength), (int)Math.floor(zLength));
 		
 		for (int x = 0; x < xLength; x++) {
 				for (int z = 0; z < zLength; z++) {

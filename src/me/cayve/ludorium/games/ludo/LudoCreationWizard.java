@@ -152,13 +152,15 @@ public class LudoCreationWizard extends GameCreationWizard {
 		if (isSixPlayer)
 			stateMachine
 				.copyState("STARTER REGION").buildState()
-				.copyState("STARTER REGION")
-					.registerComplete(this::createGame).buildState();
+				.copyState("STARTER REGION").buildState();
+
+			stateMachine.newState()
+					.registerAction(this::createGame).buildState();
 	}
 	
 	private void createGame() {
 		
-		BoardList.save(new LudoBoard(instanceName, map.constructMap(), map.tiles.getFirst()));
+		BoardList.add(new LudoBoard(instanceName, map.constructMap(), map.tiles.getFirst()));
 		
 		completeWizard();
 	}
