@@ -9,6 +9,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 
 import io.papermc.paper.command.brigadier.CommandSourceStack;
+import me.cayve.ludorium.games.boards.BoardList;
 import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.ymls.TextYml;
 
@@ -41,7 +42,12 @@ public class LudoriumCommand {
 					}))
 			.then(LiteralArgumentBuilder.<CommandSourceStack>literal("leave")
 					.executes(ctx -> {
-						//Leave wizard / game
+						String playerID = ((Player)ctx.getSource().getSender()).getUniqueId().toString();
+						BoardList.forEach(x -> {
+							if (x.getLobby().hasPlayer(playerID))
+								x.getLobby().attemptLobbyLeave(playerID);
+						});
+						
 						return 1;
 					}));
 		

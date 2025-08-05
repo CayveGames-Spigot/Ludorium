@@ -1,5 +1,7 @@
 package me.cayve.ludorium.utils.animations;
 
+import org.joml.Random;
+
 import me.cayve.ludorium.main.LudoriumException;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
@@ -11,6 +13,7 @@ public abstract class Animation<T> {
 	private boolean loop;
 	private float startTime = 0, endTime = 1;
 	private float speed = 1, duration = 1;
+	private float randomizedOffset = 0;
 	
 	/**
 	 * Sets the speed of this animation
@@ -32,6 +35,12 @@ public abstract class Animation<T> {
 	 * @return self
 	 */
 	public Animation<T> loops() { loop = true; return this; }
+	
+	/**
+	 * Randomizes the where the animation starts in the timeline
+	 * @return
+	 */
+	public Animation<T> randomize() { randomizedOffset = new Random().nextFloat(); return this; }
 	/**
 	 * Sets this animation to be a sub-animation of the base.
 	 * (e.x. Parabola of a sin wave)
@@ -75,11 +84,8 @@ public abstract class Animation<T> {
 		if (speed == 0)
 			return;
 		
-		task = Timer.register(new Task().setRefreshRate(0).setDuration(duration / speed)
-				.registerOnUpdate(() -> {
-					if (onUpdate != null)
-						onUpdate.run();
-				})
+		task = Timer.register(new Task().setRefreshRate(0).setDuration(duration / speed).skip(randomizedOffset)
+				.registerOnUpdate(onUpdate)
 				.registerOnComplete(() -> {
 					if (loop) {
 						task.restart();

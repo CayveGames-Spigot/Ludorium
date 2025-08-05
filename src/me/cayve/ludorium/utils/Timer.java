@@ -7,12 +7,14 @@ import java.util.UUID;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
+import me.cayve.ludorium.utils.functionals.MultiRunnable;
 
 public class Timer {
 
 	public static class Task {
-		private ArrayList<Runnable> onComplete = new ArrayList<>();
-		private ArrayList<Runnable> onUpdate = new ArrayList<>();
+		private MultiRunnable onComplete = new MultiRunnable();
+		private MultiRunnable onUpdate = new MultiRunnable();
+		private MultiRunnable onCanceled = new MultiRunnable();
 		
 		private long duration = -1;
 		private long refreshRate = -1;
@@ -23,11 +25,26 @@ public class Timer {
 		private boolean isComplete;
 		private boolean isPaused;
 		private boolean isCanceled;
+		private boolean refreshOnStart;
 		
 		private String sourceKey;
 		
 		public Task() { this.sourceKey = UUID.randomUUID().toString(); }
 		public Task(String sourceKey) { this.sourceKey = sourceKey; }
+		
+		public Task skip(long ticks) {
+			timeUntilCompletion -= ticks;
+			timeUntilNextRefresh -= ticks;
+			return this;
+		}
+		
+		public Task skip(float seconds) {
+			return skip((long)Math.round(seconds * 20));
+		}
+		
+		public Task skip(int seconds) {
+			return skip(seconds * 20l);
+		}
 		
 		public Task setDuration(long ticks) {
 			this.duration = ticks;
@@ -36,15 +53,11 @@ public class Timer {
 		}
 		
 		public Task setDuration(float seconds) {
-			this.duration = Math.round(seconds * 20);
-			this.timeUntilCompletion = this.duration;
-			return this;
+			return setDuration((long)Math.round(seconds * 20));
 		}
 		
 		public Task setDuration(int seconds) {
-			this.duration = seconds * 20;
-			this.timeUntilCompletion = this.duration;
-			return this;
+			return setDuration(seconds * 20l);
 		}
 		
 		public Task setRefreshRate(long ticks) {
@@ -54,24 +67,33 @@ public class Timer {
 		}
 		
 		public Task setRefreshRate(float seconds) {
-			this.refreshRate = Math.round(seconds * 20);
-			this.timeUntilNextRefresh = this.refreshRate;
-			return this;
+			return setRefreshRate((long)Math.round(seconds * 20));
 		}
 		
 		public Task setRefreshRate(int seconds) {
-			this.refreshRate = seconds * 20;
-			this.timeUntilNextRefresh = this.refreshRate;
-			return this;
+			return setRefreshRate(seconds * 20l);
 		}
 	
 		public Task registerOnComplete(Runnable listener) {
-			onComplete.add(listener);
+			if (listener != null)
+				onComplete.add(listener);
 			return this;
 		}
 		
 		public Task registerOnUpdate(Runnable listener) {
-			onUpdate.add(listener);
+			if (listener != null)
+				onUpdate.add(listener);
+			return this;
+		}
+		
+		public Task registerOnCanceled(Runnable listener) {
+			if (listener != null)
+				onCanceled.add(listener);
+			return this;
+		}
+		
+		public Task refreshOnStart() { 
+			refreshOnStart = true;
 			return this;
 		}
 		
@@ -87,6 +109,7 @@ public class Timer {
 		
 		public void cancel() {
 			isCanceled = true;
+			onCanceled.run();
 		}
 		
 		public void restart() {
@@ -94,13 +117,16 @@ public class Timer {
 			timeUntilCompletion = duration;
 			
 			isPaused = false;
-			isComplete = false;
+			isComplete = false;	
 		}
 		
 		public boolean isComplete() { return isComplete; }
 		public boolean isPaused() { return isPaused; }
 		public float getPercentTimeLeft() { return timeUntilCompletion / (float) duration; }
 		public float getPercentTimeCompleted() { return 1 - getPercentTimeLeft(); }
+		public long getTicksLeft() { return timeUntilCompletion; }
+		public int getWholeSecondsLeft() { return Math.round(timeUntilCompletion / 20f); }
+		public float getSecondsLeft() { return timeUntilCompletion / 20f; }
 
 		/**
 		 * Called once per tick
@@ -108,21 +134,21 @@ public class Timer {
 		private void update() {
 			if (isComplete || isCanceled || isPaused) return;
 
+			if (refreshOnStart && duration == timeUntilCompletion)
+				onUpdate.run();
+			
 			if (duration != -1) timeUntilCompletion--;
 			if (refreshRate != -1) timeUntilNextRefresh--;
 			
 			if (refreshRate != -1 && timeUntilNextRefresh <= 0)
 			{
 				timeUntilNextRefresh = refreshRate;
-
-				for (Runnable onUpdateEvent : onUpdate)
-					onUpdateEvent.run();
+				onUpdate.run();
 			}
 			
 			if (duration != -1 && timeUntilCompletion <= 0) {
 				isComplete = true;
-				for (Runnable onCompleteEvent : onComplete)
-					onCompleteEvent.run();
+				onComplete.run();
 			}
 		}
 	}

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -58,6 +58,8 @@ public class ToolbarMessage {
 		private float duration;
 		
 		private boolean hasActivated = false;
+		
+		private boolean beenSkipped = false;
 		
 		public ActiveMessage(Message template) {
 			this.template = template;
@@ -132,24 +134,22 @@ public class ToolbarMessage {
 			Player player = entry.getKey();
 			
 			if (!messageQueues.get(player).isEmpty()) {
+				//Retrieve the first message of the queue
 				ActiveMessage targetMessage = entry.getValue().get(0);
 				
+				//Test if any other messages in the queue have a higher priority
 				for (int i = 0; i < messageQueues.get(player).size(); i++) {
 					ActiveMessage curr = messageQueues.get(player).get(i);
 					
-					//If message does NOT have a lower priority value
-					//AND
-					//If first message is permanent and there is another, highest duration wins (causes cycling effect)
-					//If first message is permanent and there is a non-permanent, replace (causes permanent messages to come last in queue)
-					if (!(curr.template.priority < targetMessage.template.priority) &&
-							((curr.template.isPermanent && targetMessage.template.isPermanent && curr.duration > targetMessage.duration) ||
-							(targetMessage.template.isPermanent && !curr.template.isPermanent))) {
+					//If a message has been skipped and should be cleared, remove it
+					if (curr.template.clearIfSkipped && curr.beenSkipped) {
+						messageQueues.get(player).remove(i);
+						i--;
+					}
+					else if (hasPriorityOver(curr, targetMessage)) {
 						{
-							if (targetMessage.template.clearIfSkipped)
-							{
-								messageQueues.get(player).remove(i);
-								i--;
-							}
+							if (targetMessage.template.clearIfSkipped && targetMessage.hasActivated)
+								targetMessage.beenSkipped = true;
 							
 							targetMessage = curr;
 							messageQueues.get(player).remove(targetMessage);
@@ -163,6 +163,24 @@ public class ToolbarMessage {
 			if (messageQueues.get(player).isEmpty())
 				mapIterator.remove();
 		}
+	}
+	
+	private static boolean hasPriorityOver(ActiveMessage toTest, ActiveMessage original) {
+		//If message does NOT have a lower priority value
+		//AND
+		//If first message is permanent and there is another, highest duration wins (causes cycling effect)
+		//If first message is permanent and there is a non-permanent, replace (causes permanent messages to come last in queue)
+		
+		//OR
+		
+		//If both messages are non-permanent
+		//AND
+		//If the message has a higher priority
+		return (!(toTest.template.priority < original.template.priority) &&
+				((toTest.template.isPermanent && original.template.isPermanent && toTest.duration > original.duration) ||
+				(original.template.isPermanent && !toTest.template.isPermanent))) ||
+				(!toTest.template.isPermanent && !original.template.isPermanent &&
+				toTest.template.priority > original.template.priority);
 	}
 	
 	/**
@@ -198,7 +216,18 @@ public class ToolbarMessage {
 	 * @param sourceKey The source key to compare
 	 */
 	public static void clearAllFromSource(String sourceKey) {
-		clearIf(testMessage -> testMessage.sourceKey != null && testMessage.sourceKey.equals(sourceKey));
+		clearIf((player, testMessage) -> testMessage.sourceKey != null && testMessage.sourceKey.startsWith(sourceKey));
+	}
+	
+	/**
+	 * Clears all messages for a player from a given source
+	 * @param player The player to clear the messages for
+	 * @param sourceKey The source key to clear
+	 */
+	public static void clearPlayerFromSource(Player player, String sourceKey) {
+		clearIf((testPlayer, testMessage) -> 
+			testMessage.sourceKey != null && testMessage.sourceKey.startsWith(sourceKey) && 
+			player.getUniqueId().toString().equals(testPlayer.getUniqueId().toString()));
 	}
 	
 	/**
@@ -206,25 +235,28 @@ public class ToolbarMessage {
 	 * @param message The message to clear
 	 */
 	public static void clearMessage(Message message) {
-		clearIf(testMessage -> testMessage.equals(message));
+		clearIf((player, testMessage) -> testMessage.equals(message));
 	}
 	
 	/**
 	 * Clears a message based on given predicate
 	 * @param predicate The predicate to evaluate
 	 */
-	public static void clearIf(Predicate<Message> predicate) {
+	public static void clearIf(BiPredicate<Player, Message> predicate) {
 		boolean update = false;
-		for (Player player : messageQueues.keySet()) {
+
+		Iterator<Player> playerIterator = messageQueues.keySet().iterator();
+		while (playerIterator.hasNext()) {
+			Player player = playerIterator.next();
 			//Go top down to avoid list removal issues (multiple of the same message can also exist)
 			int messageIndex = messageQueues.get(player).size() - 1;
 			while (messageIndex >= 0) {
-				if (predicate.test(messageQueues.get(player).get(messageIndex).template))
+				if (predicate.test(player, messageQueues.get(player).get(messageIndex).template))
 				{
 					messageQueues.get(player).remove(messageIndex);
 					
 					if (messageQueues.get(player).isEmpty())
-						messageQueues.remove(player);
+						playerIterator.remove();
 				}
 				if (messageIndex == 0) //If the message is currently displayed, clear it
 					update = true;
@@ -248,7 +280,7 @@ public class ToolbarMessage {
 	}
 	
 	/**
-	 * Quick way to clear all from source and queue a new message. 
+	 * Quick way to clear all a player's messages from source and queue a new message. 
 	 * Used if a source will only ever be sending one message at a time.
 	 * @param player The player to send the message to
 	 * @param source The source the message came from
@@ -256,13 +288,13 @@ public class ToolbarMessage {
 	 * @return self
 	 */
 	public static Message clearSourceAndSend(Player player, String source, String message) {
-		clearAllFromSource(source);
+		clearPlayerFromSource(player, source);
 		
 		return sendQueue(player, source, message);
 	}
 	
 	/**
-	 * Quick way to clear all from source and immediately send a new message. 
+	 * Quick way to clear all a player's messages from source and immediately send a new message. 
 	 * Used if a source will only ever be sending one message at a time.
 	 * Keep in mind other sources might still have messages associated with the player
 	 * @param player The player to send the message to
@@ -271,7 +303,7 @@ public class ToolbarMessage {
 	 * @return self
 	 */
 	public static Message clearSourceAndSendImmediate(Player player, String source, String message) {
-		clearAllFromSource(source);
+		clearPlayerFromSource(player, source);
 		
 		return sendImmediate(player, source, message);
 	}
@@ -309,11 +341,23 @@ public class ToolbarMessage {
 		
 		ActiveMessage messageObj = new Message(message, source).createActiveMessage();
 		
-		//If the active message is clearIfSkipped, skip it
-		if (messageQueues.get(player).size() != 0 && messageQueues.get(player).get(0).template.clearIfSkipped)
-			messageQueues.get(player).remove(0);
+		//If current message has a higher priority than the message, then just add the message to the queue
+		if (messageQueues.get(player).size() == 0 || hasPriorityOver(messageQueues.get(player).get(0), messageObj))
+		{
+			//If the message fails to go immediately (is skipped)
+			if (messageQueues.get(player).size() != 0)
+				messageObj.beenSkipped = true;
+			
+			messageQueues.get(player).add(messageObj);
+		}
+		else //Otherwise, skip the current message
+		{
+			if (messageQueues.get(player).get(0).hasActivated)
+				messageQueues.get(player).get(0).beenSkipped = true;
+			
+			messageQueues.get(player).add(0, messageObj);
+		}
 		
-		messageQueues.get(player).add(0, messageObj);
 		
 		return messageObj.template;
 	}

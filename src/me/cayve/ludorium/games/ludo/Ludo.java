@@ -15,12 +15,12 @@ public class Ludo implements Game {
 
 	@Override
 	public void save() {
-		LudoYml.saveBoards(BoardList.getInstanceList(LudoBoard.class));
+		LudoYml.saveBoards(BoardList.getInstanceListOfType(LudoBoard.class));
 	}
 
 	@Override
 	public void load() {
-		BoardList.destroyAllOfType(LudoBoard.class);
+		BoardList.removeAllOfType(LudoBoard.class);
 		
 		LudoYml.loadBoards();
 	}

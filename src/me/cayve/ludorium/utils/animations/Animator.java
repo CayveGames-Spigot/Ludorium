@@ -9,16 +9,17 @@ import me.cayve.ludorium.utils.locational.Vector3D;
 public class Animator {
 
 	private Consumer<Transform> onUpdate;
-	private Runnable onComplete;
+	private Runnable onComplete, onCanceled;
 	
 	private Animation<Float> x, y, z, scale, pitch, yaw;
 	private Animation<Vector3D> position;
 	private Animation<Vector2D> rotation;
 	private Animation<Transform> transform;
 	
-	public Animator(Consumer<Transform> onUpdate, Runnable onComplete) {
+	public Animator(Consumer<Transform> onUpdate, Runnable onComplete, Runnable onCanceled) {
 		this.onUpdate = onUpdate;
 		this.onComplete = onComplete;
+		this.onCanceled = onCanceled;
 	}
 	
 	/**
@@ -141,6 +142,8 @@ public class Animator {
 			rotation.destroy();
 		if (transform != null)
 			transform.destroy();
+		
+		onCanceled.run();
 	}
 	
 	private void onAnyAnimationUpdate() {

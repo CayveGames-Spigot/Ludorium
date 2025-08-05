@@ -19,6 +19,7 @@ import me.cayve.ludorium.utils.DiceRoll;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
+import me.cayve.ludorium.utils.entities.ItemEntity;
 import me.cayve.ludorium.utils.locational.Vector2D;
 
 public class LudoBoard extends GameBoard {
@@ -98,13 +99,13 @@ public class LudoBoard extends GameBoard {
 	
 	@Override
 	protected void generateLobby() {
-		ArrayList<InteractionLobby.Token> tokens = new ArrayList<>();
+		ArrayList<ItemEntity> tokens = new ArrayList<>();
 		
-		for (int i = 0; i < boardMap.getColorCount(); i++)
-			tokens.add(new InteractionLobby.Token(
-					boardMap.getStarterCenter(origin, i),			//Location of the piece
-					CustomModel.get(Ludo.class, COLOR_ORDER[i]), 	//Model of the piece
-					new Vector2D(1, 1)));							//Size of the interaction
+		for (int i = 0; i < boardMap.getColorCount(); i++) {
+			ItemEntity token = new ItemEntity(boardMap.getStarterCenter(origin, i), CustomModel.get(Ludo.class, COLOR_ORDER[i]));
+			token.setInteraction(new Vector2D(1, 1));
+			tokens.add(token);
+		}
 		
 		lobby = new InteractionLobby(2, boardMap.getColorCount(), tokens);
 		
@@ -150,7 +151,7 @@ public class LudoBoard extends GameBoard {
 	@Override
 	protected void startGame() {
 		initializeTileMaps(origin);
-		gameInstance = new LudoInstance(this::onGameInstanceUpdate, lobby.getActiveIndexes(), boardMap, false, false, false);
+		gameInstance = new LudoInstance(this::onGameInstanceUpdate, lobby.getOccupiedPositions(), boardMap, false, false, false);
 		
 		createStates();
 	}

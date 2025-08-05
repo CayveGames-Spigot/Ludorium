@@ -84,7 +84,7 @@ public class LudoriumPlugin extends JavaPlugin {
 			GameRegistrar.forEachGame(x -> x.save());
 		
 		GameCreationWizard.destroyAll();
-		BoardList.destroyAll();
+		BoardList.removeAll();
 
 		LudoriumCommand.uninitialize();
 		PlayerStateManager.uninitialize();

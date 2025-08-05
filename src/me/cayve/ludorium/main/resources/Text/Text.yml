@@ -7,6 +7,19 @@ commands:
   instanceDeleteFailure: '&cCould not delete the <game> instance (case sensitive!): <name>'
   instanceListHeader: 'Here is the list of active <game> instances:'
   noGameInstances: '&cThere are no active <game> instances! Create one with /ludorium <game> create'
+# THIS PLUGIN IS EQUIPPED WITH HEX COLOR CODE CONVERSION
+# Use "#FFFFFFThis is text" for normal conversion
+# Use "<gradient #FFFFFF #000000>This is gradient text</gradient>" for gradient text
+# Use "<rainbow>This is rainbow text</rainbow>" for rainbow text
+in-game:
+  joined: 'You joined the game'
+  left: 'You left the game'
+  otherJoined: '<player> joined the game'
+  otherLeft: '<player> left the game'
+  waiting: 'Waiting for more players..'
+  startsIn: 'The game will start in <duration>..'
+  crouchToSkip: '&o(Crouch to skip - <count>/<total>)'
+  skipped: 'Skipped!'
 wizards:
   started: 'Started the creation wizard'
   canceled: 'Creation wizard has been canceled'

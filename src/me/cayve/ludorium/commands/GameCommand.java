@@ -1,5 +1,6 @@
 package me.cayve.ludorium.commands;
 
+import java.util.ArrayList;
 import java.util.function.Supplier;
 
 import org.bukkit.command.CommandSender;
@@ -83,8 +84,8 @@ public class GameCommand {
 		return LiteralArgumentBuilder.<CommandSourceStack>literal("delete")
 				.then(RequiredArgumentBuilder.<CommandSourceStack, String>argument("instance name", StringArgumentType.word())
 						.suggests((context, builder) -> {
-							for (String name : BoardList.getNameList(type))
-								builder.suggest(name);
+							for (GameBoard board : BoardList.getInstanceListOfType(type))
+								builder.suggest(board.getName());
 							return builder.buildFuture();
 						})
 						.executes(ctx -> 
@@ -111,10 +112,13 @@ public class GameCommand {
 		{ 
 			CommandSender sender = ctx.getSource().getSender();
 			
+			ArrayList<String> nameList = new ArrayList<>();
+			BoardList.getInstanceListOfType(type).forEach(x -> nameList.add(x.getName()));
+			
 			sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-					BoardList.getNameList(type).size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
+					nameList.size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
 					.replace("<game>", label));
-			for (String board : BoardList.getNameList(type))
+			for (String board : nameList)
 				sender.sendMessage(board);
 			
 			return 1;

@@ -195,7 +195,8 @@ public class PlayerStateManager implements Listener {
 	 * @param player The player to create a new profile for. Must be online.
 	 * @param gameKey The key for the initial game state
 	 * @param allowExternalAlterations Whether external forces can change the game profile. (i.e. picking up items)
-	 * The events prohibiting external forces are lowest priority, so overwriting is possible
+	 * The events prohibiting external forces are lowest priority, so overwriting is possible. 
+	 * This should be used in a meta sense as restoring the player's original inventory will overwrite any alterations made to the profile inventory
 	 */
 	public static void createProfile(Player player, String gameKey, boolean allowExternalAlterations) {
 		String playerID = player.getUniqueId().toString();

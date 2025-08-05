@@ -1,6 +1,5 @@
 package me.cayve.ludorium.utils.entities;
 
-import java.util.ArrayList;
 import java.util.function.Consumer;
 
 import org.bukkit.Location;
@@ -15,6 +14,7 @@ import org.bukkit.util.Transformation;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.utils.animations.Animator;
+import me.cayve.ludorium.utils.functionals.MultiConsumer;
 import me.cayve.ludorium.utils.locational.Transform;
 import me.cayve.ludorium.utils.locational.Vector2D;
 import me.cayve.ludorium.utils.locational.Vector3D;
@@ -28,19 +28,19 @@ public class DisplayEntity<T extends Display> implements Listener {
 
 	private Animator animator;
 	private boolean isSpawned; //For animation consistency
-	private ArrayList<Consumer<DisplayEntity<T>>> onAnimatorCompleteEvent = new ArrayList<>();
-	private ArrayList<Consumer<DisplayEntity<T>>> onDestroyEvent = new ArrayList<>();
+	private MultiConsumer<DisplayEntity<T>> onAnimatorCompleteEvent = new MultiConsumer<>();
+	private MultiConsumer<DisplayEntity<T>> onDestroyEvent = new MultiConsumer<>();
 	
 	private Interaction interaction;
 	private Vector2D interactionBounds;
-	private ArrayList<Consumer<Player>> onInteractedWith = new ArrayList<>();
+	private MultiConsumer<Player> onInteractedWith = new MultiConsumer<>();
 	
 	public DisplayEntity(Class<T> type, Location location) {
 		this.type = type;
 		this.transform = new Transform();
 		this.transform.setLocation(location);
 		
-		animator = new Animator(this::onAnimatorUpdate, this::onAnimatorComplete);
+		animator = new Animator(this::onAnimatorUpdate, this::onAnimatorComplete, this::resetToOrigin);
 	}
 	
 	/**
@@ -132,6 +132,11 @@ public class DisplayEntity<T extends Display> implements Listener {
 	}
 	
 	/**
+	 * Resets the display back to the entity origin
+	 */
+	public void resetToOrigin() { displayTransform(transform); }
+	
+	/**
 	 * Spawns this entity's display 
 	 * @return
 	 */
@@ -189,36 +194,31 @@ public class DisplayEntity<T extends Display> implements Listener {
 	 * @param event
 	 */
 	public void onInteractedWith(PlayerInteractEntityEvent event) {
-	{
 		if (!(event.getRightClicked() instanceof Interaction) ||
 			!interaction.equals(event.getRightClicked())) 
 				return;
 		
-		for (Consumer<Player> listener : onInteractedWith) 
-			listener.accept(event.getPlayer());
+		onInteractedWith.accept(event.getPlayer());
 	}
-		
-	}
+	
 	/**
 	 * Registers a listener for when the interaction entity is interacted with
 	 * @param listener
 	 */
-	public void registerOnInteractedWith(Consumer<Player> listener) {
-		onInteractedWith.add(listener);
-	}
-	
+	public void registerOnInteractedWith(Consumer<Player> listener) { onInteractedWith.add(listener); }
 	
 	/**
 	 * Registers a listener for when the animator completes all animations
 	 * @param listener
 	 */
-	public void registerOnAnimatorComplete(Consumer<DisplayEntity<T>> listener) {
-		onAnimatorCompleteEvent.add(listener);
-	}
+	public void registerOnAnimatorComplete(Consumer<DisplayEntity<T>> listener) { onAnimatorCompleteEvent.add(listener); }
 	
-	public void registerOnDestroy(Consumer<DisplayEntity<T>> listener) {
-		onDestroyEvent.add(listener);
-	}
+	/**
+	 * Registers a listener for when the entity is destroyed
+	 * @param listener
+	 */
+	public void registerOnDestroy(Consumer<DisplayEntity<T>> listener) { onDestroyEvent.add(listener); }
+	
 	/**
 	 * Animations will temporarily enable the entity during playback
 	 * @return The entity's animator
@@ -237,8 +237,7 @@ public class DisplayEntity<T extends Display> implements Listener {
 		if (!isSpawned) //If the display isn't supposed to be activated, remove it after animator completes
 			remove();
 		
-		for (Consumer<DisplayEntity<T>> listener : onAnimatorCompleteEvent)
-			listener.accept(this);
+		onAnimatorCompleteEvent.accept(this);
 	}
 	
 	/**
@@ -248,7 +247,6 @@ public class DisplayEntity<T extends Display> implements Listener {
 		remove();
 		animator.cancelAnimations();
 		
-		for (Consumer<DisplayEntity<T>> listener : onDestroyEvent)
-			listener.accept(this);
+		onDestroyEvent.accept(this);
 	}
 }

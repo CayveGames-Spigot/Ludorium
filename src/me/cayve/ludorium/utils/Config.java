@@ -26,4 +26,12 @@ public class Config {
 	}
 	
 	public static boolean getBoolean(String path) { return getConfig().getBoolean(path); }
+	
+	public static int getInteger(Class<? extends Game> type, String path) {
+		return getInteger(ROOT_PATH + GameRegistrar.getPrefix(type) + "." + path);
+	}
+	
+	public static int getInteger(String path) {
+		return getConfig().getInt(path);
+	}
 }

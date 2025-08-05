@@ -14,10 +14,13 @@ public abstract class GameBoard {
 	private HashMap<String, Integer> missedTurns = new HashMap<>();
 	private int missedTurnsAllowance = 2;
 	
+	protected int gameScale = 1;
+	
 	public GameBoard(String name) {
 		boardName = name;
 	}
 	
+	public GameLobby getLobby() { return lobby; }
 	protected void generateLobby() {
 		if (lobby == null)
 			return;
