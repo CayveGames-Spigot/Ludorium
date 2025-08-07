@@ -6,15 +6,17 @@ import java.util.Map;
 
 import org.bukkit.entity.Player;
 
-import me.cayve.ludorium.utils.HexColors;
 import me.cayve.ludorium.ymls.YmlFiles.YmlFileInfo;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
 public class TextYml {
 
 	private static Map<String, YmlFileInfo> infos = new HashMap<String, YmlFileInfo>();
 
-	public static String getText(Locale locale, String text) {
+	public static Component getText(Locale locale, String path, TagResolver... tagResolvers) {
 		String lang = "_";
 		
 		//Make sure fallback text is reloaded
@@ -31,15 +33,19 @@ public class TextYml {
 				infos.put(lang, YmlFiles.reload("text/Text" + lang + ".yml"));
 			
 		} catch (Exception e) {}
-		
-		String path = text;
 
 		if (!infos.get(lang).customConfig.contains(path))
-			return ChatColor.RED + "text/Text" + lang + ".yml path: " + text + " not found.";
-		return HexColors.Convert(ChatColor.translateAlternateColorCodes('&', infos.get(lang).customConfig.getString(path)));
+			return Component.text("<red>text/Text" + lang + ".yml path: " + path + " not found.");
+		return MiniMessage.miniMessage().deserialize(infos.get(lang).customConfig.getString(path)
+				.replace("<highlight>", infos.get(lang).customConfig.getString("style.highlight"))
+				.replace("<secondary>", infos.get(lang).customConfig.getString("style.secondary")), tagResolvers);
 	}
 	
-	public static String getText(Player player, String text) {
-		return getText(player.locale(), text);
+	public static Component getText(Player player, String path, TagResolver... tagResolvers) {
+		return getText(player.locale(), path, tagResolvers);
+	}
+	
+	public static TagResolver tag(String key, Component component) {
+		return TagResolver.resolver(key, Tag.inserting(component));
 	}
 }

@@ -1,24 +1,23 @@
+style:
+  highlight: "<gray>"
+  secondary: "<dark_gray>"
 commands:
-  invalid: '&cInvalid or incomplete Ludorium command.'
-  reload: '&aThe Ludorium plugin has been reloaded.'
-  missingName: '&cPlease provide a name for the new game instance.'
-  alreadyInWizard: '&cYou are already in a creation wizard. Use  /ludorium leave  to exit.'
-  instanceDeleteSuccess: '&aSuccessfully deleted the <game> instance: <name>'
-  instanceDeleteFailure: '&cCould not delete the <game> instance (case sensitive!): <name>'
+  invalid: '<red>Invalid or incomplete Ludorium command.'
+  reload: '<green>The Ludorium plugin has been reloaded.'
+  missingName: '<red>Please provide a name for the new game instance.'
+  alreadyInWizard: '<red>You are already in a creation wizard. Use  /ludorium leave  to exit.'
+  instanceDeleteSuccess: '<green>Successfully deleted the <game> instance: <name>'
+  instanceDeleteFailure: '<red>Could not delete the <game> instance (case sensitive!): <name>'
   instanceListHeader: 'Here is the list of active <game> instances:'
-  noGameInstances: '&cThere are no active <game> instances! Create one with /ludorium <game> create'
-# THIS PLUGIN IS EQUIPPED WITH HEX COLOR CODE CONVERSION
-# Use "#FFFFFFThis is text" for normal conversion
-# Use "<gradient #FFFFFF #000000>This is gradient text</gradient>" for gradient text
-# Use "<rainbow>This is rainbow text</rainbow>" for rainbow text
+  noGameInstances: '<red>There are no active <game> instances! Create one with /ludorium <game> create'
 in-game:
   joined: 'You joined the game'
   left: 'You left the game'
-  otherJoined: '<player> joined the game'
-  otherLeft: '<player> left the game'
+  otherJoined: '<highlight><player><reset><label> joined the game'
+  otherLeft: '<highlight><player><reset><label> left the game'
   waiting: 'Waiting for more players..'
-  startsIn: 'The game will start in <duration>..'
-  crouchToSkip: '&o(Crouch to skip - <count>/<total>)'
+  startsIn: 'The game will start in <highlight><duration><reset>..'
+  crouchToSkip: '<italic>(Crouch to skip - <highlight><count>/<total><reset>)'
   skipped: 'Skipped!'
 wizards:
   started: 'Started the creation wizard'
@@ -31,9 +30,7 @@ wizards:
     colorVerification: 'Verify board colors go in clockwise order of: <colors>'
     selectTiles: 'Going clockwise, please select all tiles starting at the <color> out'
     selectHome: 'In order, select the <color> home tiles'
-
-    # This will be appended to the actions.region prompts
-    selectStarter: '<color> starter' 
+    selectStarter: '<color> starter'
     diagonals: 'Lastly, you will select diagonal pairs. Cancel if not applicable.'
     selectDiagonalPair: 'Select any single diagonal pair <progress>'
 actions:
@@ -44,16 +41,16 @@ actions:
     selectSecond: 'Please select the SECOND corner of the region: <name> <progress>'
   crouch:
     hold: 'Hold crouch to <context>'
-    confirm: '&aConfirm&r..'
-    confirmed: '&a&lConfirmed&r!'
-    cancel: '&cCancel&r..'
-    goBack: '&cGo back&r..'
-    skip: '&cSkip&r..'
+    confirm: '<green>Confirm<reset>..'
+    confirmed: '<green><bold>Confirmed<reset>!'
+    cancel: '<red>Cancel<reset>..'
+    goBack: '<red>Go back<reset>..'
+    skip: '<red>Skip<reset>..'
 words:
   colors:
-    red: '&cRed&r'
-    yellow: '&eYellow&r'
-    green: '&aGreen&r'
-    blue: '&9Blue&r'
-    purple: '&dPurple&r'
-    black: '&8Black&r'
+    red: '<red>Red<reset>'
+    yellow: '<yellow>Yellow<reset>'
+    green: '<green>Green<reset>'
+    blue: '<blue>Blue<reset>'
+    purple: '<light_purple>Purple<reset>'
+    black: '<dark_gray>Black<reset>'

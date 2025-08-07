@@ -21,6 +21,7 @@ import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 import me.cayve.ludorium.utils.locational.Vector2D;
+import me.cayve.ludorium.ymls.TextYml;
 
 public class LudoBoard extends GameBoard {
 
@@ -108,6 +109,8 @@ public class LudoBoard extends GameBoard {
 		}
 		
 		lobby = new InteractionLobby(2, boardMap.getColorCount(), tokens);
+		
+		lobby.registerPositionLabel((pos, player) -> TextYml.getText(player, "words.colors." + COLOR_ORDER[pos]));
 		
 		super.generateLobby();
 	}

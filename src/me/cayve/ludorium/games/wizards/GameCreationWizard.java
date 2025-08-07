@@ -17,6 +17,7 @@ import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
 import me.cayve.ludorium.ymls.TextYml;
+import net.kyori.adventure.text.Component;
 
 public abstract class GameCreationWizard implements Listener {
 	
@@ -158,7 +159,7 @@ public abstract class GameCreationWizard implements Listener {
 			cancelWizard();
 	}
 	
-	protected void cancelWizard(String customMessage) {
+	protected void cancelWizard(Component customMessage) {
 		ToolbarMessage.sendImmediate(player, customMessage).setType(eType.ERROR);
 		destroy();
 	}

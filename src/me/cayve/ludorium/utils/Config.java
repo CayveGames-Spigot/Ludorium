@@ -31,7 +31,11 @@ public class Config {
 		return getInteger(ROOT_PATH + GameRegistrar.getPrefix(type) + "." + path);
 	}
 	
-	public static int getInteger(String path) {
-		return getConfig().getInt(path);
+	public static int getInteger(String path) { return getConfig().getInt(path); }
+	
+	public static String getString(Class<? extends Game> type, String path) {
+		return getString(ROOT_PATH + GameRegistrar.getPrefix(type) + "." + path);
 	}
+	
+	public static String getString(String path) { return getConfig().getString(path); }
 }

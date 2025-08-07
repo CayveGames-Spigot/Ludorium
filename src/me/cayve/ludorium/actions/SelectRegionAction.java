@@ -14,13 +14,15 @@ import me.cayve.ludorium.utils.entities.BlockEntity;
 import me.cayve.ludorium.utils.locational.Grid2D;
 import me.cayve.ludorium.utils.locational.Region;
 import me.cayve.ludorium.ymls.TextYml;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class SelectRegionAction extends PlayerAction {
 
 	//Construction variables
 	private SelectBlocksAction selectBlocksAction;
 	
-	private String regionName;
+	private Component regionName;
 	
 	//Product
 	private Region region;
@@ -42,13 +44,16 @@ public class SelectRegionAction extends PlayerAction {
 			animationGrid.forEach((entity) -> entity.destroy());
 	}
 	
-	public SelectRegionAction(Player player, String regionName, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
+	public SelectRegionAction(Player player, Component regionName, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
 		super(player, successCallback, failureCallback);
 		
 		this.regionName = regionName;
 		
-		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "actions.region.selectFirst").replace("<name>", regionName)
-				.replace("<progress>", ProgressBar.generate(0, 2))).setPermanent();
+		ToolbarMessage.clearSourceAndSend(player, tsk, 
+				TextYml.getText(player, "actions.region.selectFirst",
+					TextYml.tag("name", regionName),
+					Placeholder.parsed("progress", ProgressBar.generate(0, 2))))
+			.setPermanent();
 		selectBlocksAction = new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCancelledAction).registerSelectEvent(this::onBlockSelected);
 		selectBlocksAction.setAnimationStates(animateSelection, false);
 	}
@@ -63,8 +68,11 @@ public class SelectRegionAction extends PlayerAction {
 	private void onBlockSelected(Block block) 
 	{
 		//Update message
-		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "actions.region.selectSecond").replace("<name>", regionName)
-				.replace("<progress>", ProgressBar.generate(selectBlocksAction.getSelectedCount(), 2))).setPermanent();
+		ToolbarMessage.clearSourceAndSend(player, tsk, 
+				TextYml.getText(player, "actions.region.selectSecond",
+					TextYml.tag("name", regionName),
+					Placeholder.parsed("progress", ProgressBar.generate(selectBlocksAction.getSelectedCount(), 2))))
+		.setPermanent();
 	}
 	
 	protected void onCompletedAction(PlayerAction action) //Selected block action
@@ -95,8 +103,11 @@ public class SelectRegionAction extends PlayerAction {
 			cancelEvent();
 		else //If second select, revert to first selection
 		{
-			ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "actions.region.selectFirst").replace("<name>", regionName)
-					.replace("<progress>", ProgressBar.generate(2, 2))).setPermanent();
+			ToolbarMessage.clearSourceAndSend(player, tsk, 
+					TextYml.getText(player, "actions.region.selectFirst",
+						TextYml.tag("name", regionName),
+						Placeholder.parsed("progress", ProgressBar.generate(2, 2))))
+			.setPermanent();
 		}
 	}
 	

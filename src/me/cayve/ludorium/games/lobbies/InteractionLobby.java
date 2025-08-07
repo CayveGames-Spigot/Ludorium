@@ -13,6 +13,8 @@ import me.cayve.ludorium.utils.animations.SinWaveAnimation;
 import me.cayve.ludorium.utils.entities.DisplayEntity;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 import me.cayve.ludorium.ymls.TextYml;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class InteractionLobby extends GameLobby {
 	
@@ -62,11 +64,16 @@ public class InteractionLobby extends GameLobby {
 					
 					forEachOnlinePlayer(player -> 
 						ToolbarMessage.sendImmediate(player, lobbyKey + "-interation", 
-							TextYml.getText(player, "in-game.startsIn")
-								.replace("<duration>", (graceCountdown.getWholeSecondsLeft() + COUNTDOWN_DURATION) + "") +
-							(skipCount > 0 ? " " + TextYml.getText(player, "in-game.crouchToSkip")
-								.replace("<count>", skipCount + "")
-								.replace("<total>", getPlayerCount() + "") : ""))
+							//The game starts in...
+							TextYml.getText(player, "in-game.startsIn",
+								Placeholder.parsed("duration", (graceCountdown.getWholeSecondsLeft() + COUNTDOWN_DURATION) + ""))
+							//(Crouch to skip 1/4)
+							.append(skipCount <= 0 ? Component.empty() : 
+								Component.text(" ")
+								.append(TextYml.getText(
+									player, "in-game.crouchToSkip",
+									Placeholder.parsed("count", skipCount + ""),
+									Placeholder.parsed("total", getPlayerCount() + "")))))
 						.clearIfSkipped().setMuted());
 				})
 				.registerOnComplete(this::startCountdown)).pause().refreshOnStart();;
@@ -95,7 +102,7 @@ public class InteractionLobby extends GameLobby {
 	protected void onMinimumReached() {
 		super.onMinimumReached();
 		
-		//graceCountdown.restart();
+		graceCountdown.restart();
 	}
 	
 	@Override

@@ -14,7 +14,9 @@ import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message;
 import me.cayve.ludorium.ymls.TextYml;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class SubmitAction extends PlayerAction implements Listener {
 
@@ -58,14 +60,14 @@ public class SubmitAction extends PlayerAction implements Listener {
 		
 		reminderTask = Timer.register(new Task(tsk).registerOnUpdate(() -> {
 			if (!player.isSneaking())
-				ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold")
-						.replace("<context>", 
+				ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold",
+						Placeholder.parsed("context", 
 								(resultType == eResult.BOTH || resultType == eResult.SUBMIT ?
 										TextYml.getText(player, "actions.crouch.confirm") : "") + 
 								(resultType == eResult.BOTH ? "/" : "") + 
 								(resultType == eResult.BOTH || resultType == eResult.CANCEL ?
-										TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]) : "")
-								)).clearIfSkipped();
+										TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]) : ""))))
+				.clearIfSkipped();
 		}).setRefreshRate(30));
 	}
 	
@@ -75,21 +77,22 @@ public class SubmitAction extends PlayerAction implements Listener {
 	}
 	
 	private void updateMessage() {
-		String message = "";
+		Component message = Component.empty();
 		
 		if (resultType == eResult.SUBMIT || resultType == eResult.BOTH)
 		{
 			if (submitTask.isComplete())
-				message += TextYml.getText(player, "actions.crouch.confirmed") + " " + 
-						ChatColor.translateAlternateColorCodes('&', ProgressBar.generate(submitTask.getPercentTimeCompleted(), "[&a%i%o&r]"));
+				message.append(TextYml.getText(player, "actions.crouch.confirmed"))
+					.append(MiniMessage.miniMessage().deserialize(ProgressBar.generate(submitTask.getPercentTimeCompleted(), "[<green>%i%o<reset>]")));
 			else
-				message += TextYml.getText(player, "actions.crouch.confirm") + " " + ProgressBar.generate(submitTask.getPercentTimeCompleted());
+				message.append(TextYml.getText(player, "actions.crouch.confirm"))
+					.append(Component.text(ProgressBar.generate(submitTask.getPercentTimeCompleted())));
 		}
 		if (resultType == eResult.BOTH)
-			message += ProgressBar.generate(transitionTask.getPercentTimeCompleted(), 6, " %i %o ");
+			message.append(Component.text(ProgressBar.generate(transitionTask.getPercentTimeCompleted(), 6, " %i %o ")));
 		if (resultType == eResult.BOTH || resultType == eResult.CANCEL)
-			message += TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()])
-					+ " " + ProgressBar.generate(cancelTask.getPercentTimeCompleted());
+			message.append(TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]))
+				.append(Component.text(ProgressBar.generate(cancelTask.getPercentTimeCompleted())));
 		
 		if (messageObject != null)
 			messageObject.updateMessage(message);

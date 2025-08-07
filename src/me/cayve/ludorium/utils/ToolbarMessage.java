@@ -11,7 +11,7 @@ import org.bukkit.entity.Player;
 
 import me.cayve.ludorium.utils.Timer.Task;
 import net.kyori.adventure.text.Component;
-import net.md_5.bungee.api.ChatColor;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public class ToolbarMessage {
 
@@ -19,7 +19,7 @@ public class ToolbarMessage {
 		
 		public enum eType { MESSAGE, SUCCESS, WARNING, ERROR }
 		
-		private String message;
+		private Component message;
 		private boolean isMuted;
 		private boolean isPermanent;
 		private boolean clearIfSkipped;
@@ -27,10 +27,10 @@ public class ToolbarMessage {
 		private int priority = 0;
 		private boolean refreshEveryTick;
 		private boolean showDuration;
-		private eType type;
+		private eType type = eType.MESSAGE;
 		private String sourceKey;
 		
-		public Message(String message, String sourceKey) {
+		public Message(Component message, String sourceKey) {
 			this.message = message;
 			this.sourceKey = sourceKey;
 		}
@@ -44,8 +44,8 @@ public class ToolbarMessage {
 		public Message setPriority(int priority) { this.priority = priority; return this; }
 		public Message refreshEveryTick() { this.refreshEveryTick = true; return this; }
 		
-		public String getMessage() { return message; }
-		public void updateMessage(String newMessage) { this.message = newMessage; }
+		public Component getMessage() { return message; }
+		public void updateMessage(Component newMessage) { this.message = newMessage; }
 		
 		private ActiveMessage createActiveMessage() { return new ActiveMessage(this); }
 	}
@@ -59,7 +59,7 @@ public class ToolbarMessage {
 		
 		private boolean hasActivated = false;
 		
-		private boolean beenSkipped = false;
+		private boolean requestsImmediate;
 		
 		public ActiveMessage(Message template) {
 			this.template = template;
@@ -138,25 +138,31 @@ public class ToolbarMessage {
 				ActiveMessage targetMessage = entry.getValue().get(0);
 				
 				//Test if any other messages in the queue have a higher priority
-				for (int i = 0; i < messageQueues.get(player).size(); i++) {
+				for (int i = 1; i < messageQueues.get(player).size(); i++) {
 					ActiveMessage curr = messageQueues.get(player).get(i);
 					
-					//If a message has been skipped and should be cleared, remove it
-					if (curr.template.clearIfSkipped && curr.beenSkipped) {
+					if (hasPriorityOver(curr, targetMessage)) {
+						if (targetMessage.template.clearIfSkipped && targetMessage.hasActivated)
+						{
+							messageQueues.get(player).remove(i);
+							i--;
+						}
+						
+						targetMessage = curr;
+						messageQueues.get(player).remove(targetMessage);
+						messageQueues.get(player).add(0, targetMessage);
+					}
+					//If a message fails to have higher priority and is clearIfSkipped
+					//AND
+					//Has been activated OR requests immediate
+					else if (curr.template.clearIfSkipped && (curr.hasActivated || curr.requestsImmediate)) {
 						messageQueues.get(player).remove(i);
 						i--;
 					}
-					else if (hasPriorityOver(curr, targetMessage)) {
-						{
-							if (targetMessage.template.clearIfSkipped && targetMessage.hasActivated)
-								targetMessage.beenSkipped = true;
-							
-							targetMessage = curr;
-							messageQueues.get(player).remove(targetMessage);
-							messageQueues.get(player).add(0, targetMessage);
-						}
-					}
 				}
+				
+				//If target requested immediate, it no longer should request it
+				targetMessage.requestsImmediate = false;
 			}
 
 			//Clear the map of the player if they have no more message
@@ -287,7 +293,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message clearSourceAndSend(Player player, String source, String message) {
+	public static Message clearSourceAndSend(Player player, String source, Component message) {
 		clearPlayerFromSource(player, source);
 		
 		return sendQueue(player, source, message);
@@ -302,7 +308,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message clearSourceAndSendImmediate(Player player, String source, String message) {
+	public static Message clearSourceAndSendImmediate(Player player, String source, Component message) {
 		clearPlayerFromSource(player, source);
 		
 		return sendImmediate(player, source, message);
@@ -314,7 +320,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendImmediate(Player player, String message) {
+	public static Message sendImmediate(Player player, Component message) {
 		return sendImmediate(player, null, message);
 	}
 	
@@ -324,7 +330,7 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendQueue(Player player, String message) {
+	public static Message sendQueue(Player player, Component message) {
 		return sendQueue(player, null, message);
 	}
 	
@@ -335,29 +341,15 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendImmediate(Player player, String source, String message) {
+	public static Message sendImmediate(Player player, String source, Component message) {
 		if (!messageQueues.containsKey(player))
 			messageQueues.put(player, new ArrayList<ActiveMessage>());
 		
 		ActiveMessage messageObj = new Message(message, source).createActiveMessage();
 		
-		//If current message has a higher priority than the message, then just add the message to the queue
-		if (messageQueues.get(player).size() == 0 || hasPriorityOver(messageQueues.get(player).get(0), messageObj))
-		{
-			//If the message fails to go immediately (is skipped)
-			if (messageQueues.get(player).size() != 0)
-				messageObj.beenSkipped = true;
-			
-			messageQueues.get(player).add(messageObj);
-		}
-		else //Otherwise, skip the current message
-		{
-			if (messageQueues.get(player).get(0).hasActivated)
-				messageQueues.get(player).get(0).beenSkipped = true;
-			
-			messageQueues.get(player).add(0, messageObj);
-		}
+		messageObj.requestsImmediate = true;
 		
+		messageQueues.get(player).add(0, messageObj);
 		
 		return messageObj.template;
 	}
@@ -369,9 +361,9 @@ public class ToolbarMessage {
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendQueue(Player player, String source, String message) {
+	public static Message sendQueue(Player player, String source, Component message) {
 		if (!messageQueues.containsKey(player))
-			return sendImmediate(player, source, message);
+			messageQueues.put(player, new ArrayList<ActiveMessage>());
 		
 		Message messageObj = new Message(message, source);
 		messageQueues.get(player).add(messageObj.createActiveMessage());
@@ -382,29 +374,35 @@ public class ToolbarMessage {
 	private static void sendToolbarMessage(Player player, ActiveMessage message) {
 		if (player == null || !player.isOnline()) return;
 		
-		String rawMessage = message == null ? "" : message.template.message;
+		Component messageComponent = message == null ? Component.empty() : message.template.message;
+
+		if (message != null) {
+			if (message.template.showDuration)
+				messageComponent.append(Component.text(ProgressBar.generate(message.getElapsedPercent())));
+			
+			NamedTextColor textColor = switch(message.template.type) {
+				case Message.eType.ERROR -> NamedTextColor.RED;
+				case Message.eType.WARNING -> NamedTextColor.GOLD;
+				case Message.eType.SUCCESS -> NamedTextColor.DARK_GREEN;
+				default -> NamedTextColor.WHITE;
+			};
+			
+			messageComponent = messageComponent.color(textColor);
+			
+			if (!message.hasActivated && !message.template.isMuted) 
+			{
+				if (message.template.type == Message.eType.ERROR)
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 0.5f);
+				else if (message.template.type == Message.eType.WARNING)
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 0.75f);
+				else if (message.template.type == Message.eType.SUCCESS)
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 2);
+				else
+					player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 1);
+			}
 		
-		if (message != null)
-		{
-			rawMessage = (message.template.type == Message.eType.ERROR ? ChatColor.RED :
-						message.template.type == Message.eType.WARNING ? ChatColor.GOLD :
-						message.template.type == Message.eType.SUCCESS ? ChatColor.DARK_GREEN : 
-						ChatColor.WHITE) + rawMessage + 
-						(message.template.showDuration ? " " + ProgressBar.generate(message.getElapsedPercent()) : "");
 		}
 		
-		if (message != null && !message.hasActivated && !message.template.isMuted) 
-		{
-			if (message.template.type == Message.eType.ERROR)
-				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 0.5f);
-			else if (message.template.type == Message.eType.WARNING)
-				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 0.75f);
-			else if (message.template.type == Message.eType.SUCCESS)
-				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 2);
-			else
-				player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 1);
-		}
-		
-		player.sendActionBar(Component.text(rawMessage));
+		player.sendActionBar(messageComponent);
 	}
 }

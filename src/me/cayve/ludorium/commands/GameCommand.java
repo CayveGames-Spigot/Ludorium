@@ -18,6 +18,7 @@ import me.cayve.ludorium.games.boards.BoardList;
 import me.cayve.ludorium.games.boards.GameBoard;
 import me.cayve.ludorium.games.wizards.GameCreationWizard;
 import me.cayve.ludorium.ymls.TextYml;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class GameCommand {
 
@@ -95,12 +96,14 @@ public class GameCommand {
 							
 							if (BoardList.remove(instanceName, type))
 								sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-										"commands.instanceDeleteSuccess")
-										.replace("<name>", instanceName).replace("<game>", label));
+										"commands.instanceDeleteSuccess",
+										Placeholder.parsed("<name>", instanceName),
+										Placeholder.parsed("<game>", label)));
 							else //Failed to delete instance
 								sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-										"commands.instanceDeleteFailure")
-										.replace("<name>", instanceName).replace("<game>", label));
+										"commands.instanceDeleteFailure",
+										Placeholder.parsed("<name>", instanceName),
+										Placeholder.parsed("<game>", label)));
 							return 1;
 						}).build())
 					.build();
@@ -116,8 +119,8 @@ public class GameCommand {
 			BoardList.getInstanceListOfType(type).forEach(x -> nameList.add(x.getName()));
 			
 			sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
-					nameList.size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader")
-					.replace("<game>", label));
+					nameList.size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader",
+							Placeholder.parsed("<game>", label)));
 			for (String board : nameList)
 				sender.sendMessage(board);
 			

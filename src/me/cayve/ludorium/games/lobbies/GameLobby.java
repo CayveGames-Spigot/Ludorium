@@ -2,6 +2,7 @@ package me.cayve.ludorium.games.lobbies;
 
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import org.bukkit.Bukkit;
@@ -22,6 +23,8 @@ import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
 import me.cayve.ludorium.utils.functionals.MultiConsumer;
 import me.cayve.ludorium.utils.functionals.MultiRunnable;
 import me.cayve.ludorium.ymls.TextYml;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 /**
  * @author Cayve
@@ -35,10 +38,12 @@ import me.cayve.ludorium.ymls.TextYml;
 public abstract class GameLobby implements Listener {
 	
 	protected static int COUNTDOWN_DURATION = 5;
-	protected static int JOIN_LEAVE_PROMPT_DURATION = 3;
+	protected static int JOIN_LEAVE_PROMPT_DURATION = 1;
 	
 	protected String lobbyKey = UUID.randomUUID().toString();
 	private boolean isEnabled;
+	
+	private BiFunction<Integer, Player, Component> positionLabelFunc;
 	
 	private String[] players;
 	private String host;
@@ -84,6 +89,18 @@ public abstract class GameLobby implements Listener {
 		this.forceInventoryState = forceInventoryState;
 	}
 	
+	/**
+	 * Registers the function to generate the label for a given position to be viewed by a given player when needed
+	 * @param labelFunc
+	 */
+	public void registerPositionLabel(BiFunction<Integer, Player, Component> labelFunc) { positionLabelFunc = labelFunc; }
+	
+	protected Component getPositionLabel(int position, Player viewer) {
+		if (positionLabelFunc == null)
+			return Component.empty();
+		return positionLabelFunc.apply(position, viewer);
+	}
+	
 	private void registerEvents() {
 		LudoriumPlugin.registerEvent(this);
 		
@@ -91,7 +108,8 @@ public abstract class GameLobby implements Listener {
 				.registerOnUpdate(() -> {
 					forEachOnlinePlayer((player) -> {
 						ToolbarMessage.sendImmediate(player, lobbyKey + "-countdown", 
-								TextYml.getText(player, "in-game.startsIn").replace("<duration>", countdown.getWholeSecondsLeft() + ""))
+								TextYml.getText(player, "in-game.startsIn", 
+										Placeholder.parsed("duration", countdown.getWholeSecondsLeft() + "")))
 						.clearIfSkipped().setMuted();
 						player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 1);
 					});
@@ -167,9 +185,7 @@ public abstract class GameLobby implements Listener {
 		
 		ToolbarMessage.sendQueue(player, lobbyKey + "-waiting", TextYml.getText(player, "in-game.waiting")).setPermanent();
 		
-		forEachOnlinePlayer(x -> ToolbarMessage.sendImmediate(x, lobbyKey, 
-				TextYml.getText(x, "in-game.otherJoined").replace("<player>", player.getName()))
-					.clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
+		promptJoinLeave("in-game.otherJoined", lobbyPosition, player);
 		
 		players[lobbyPosition] = playerID;
 		playerCount++;
@@ -196,9 +212,11 @@ public abstract class GameLobby implements Listener {
 		if (!hasPlayer(playerID))
 			return;
 		
+		int lobbyPosition = getPlayerPosition(playerID);
+		
 		//Remove the player from the lobby and update trackers
-		lobbyLeaveEvent.accept(getPlayerPosition(playerID));
-		players[getPlayerPosition(playerID)] = null;
+		lobbyLeaveEvent.accept(lobbyPosition);
+		players[lobbyPosition] = null;
 		playerCount--;
 		
 		//Update host reference if necessary
@@ -212,10 +230,8 @@ public abstract class GameLobby implements Listener {
 			ToolbarMessage.clearSourceAndSendImmediate(player.getPlayer(), lobbyKey, 
 					TextYml.getText(player.getPlayer(), "in-game.left")).setType(eType.ERROR).clearIfSkipped();
 		
-		forEachOnlinePlayer(x -> ToolbarMessage.sendImmediate(x, lobbyKey, 
-				TextYml.getText(x, "in-game.otherLeft").replace("<player>", player.getName()))
-					.clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
-		
+		promptJoinLeave("in-game.otherLeft", lobbyPosition, player);
+					
 		//Restore the player's inventory
 		if (storeInventory)
 			PlayerStateManager.removeGameState(playerID, lobbyKey);
@@ -223,6 +239,21 @@ public abstract class GameLobby implements Listener {
 		//Check if minimum player count has been lost
 		if (playerCount == minimum - 1)
 			onMinimumLost();
+	}
+	
+	private void promptJoinLeave(String messagePath, int lobbyPosition, OfflinePlayer player) {
+		forEachOnlinePlayer(x -> ToolbarMessage.sendImmediate(x, lobbyKey, 
+					TextYml.getText(x, messagePath, 
+						TextYml.tag(
+							"label", (getPositionLabel(lobbyPosition, x) == null ? Component.empty() :
+							Component.text(" (")
+							.append(getPositionLabel(lobbyPosition, x))
+							.append(Component.text(")")))
+						),
+						TextYml.tag("player", player.isOnline() ? player.getPlayer().displayName() : Component.text(player.getName()))
+					)
+				)				
+				.clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
 	}
 	
 	public void registerJoinListener(Consumer<Integer> listener) { lobbyJoinEvent.add(listener); }
