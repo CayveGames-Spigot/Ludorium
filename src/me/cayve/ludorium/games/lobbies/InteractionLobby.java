@@ -32,8 +32,25 @@ public class InteractionLobby extends GameLobby {
 		registerEvents();
 	}
 	
+	public InteractionLobby(int minimum, int maximum, boolean forceInventoryState, ItemEntity globalToken) {
+		super(minimum, maximum, forceInventoryState);
+		
+		addDisplay(globalToken, -1);
+		
+		registerEvents();
+	}
+	
 	public InteractionLobby(int minimum, int maximum, ArrayList<ItemEntity> tokens) {
 		super(minimum, maximum);
+		
+		for (int i = 0; i < tokens.size(); i++)
+			addDisplay(tokens.get(i), i);
+		
+		registerEvents();
+	}
+	
+	public InteractionLobby(int minimum, int maximum, boolean forceInventoryState, ArrayList<ItemEntity> tokens) {
+		super(minimum, maximum, forceInventoryState);
 		
 		for (int i = 0; i < tokens.size(); i++)
 			addDisplay(tokens.get(i), i);

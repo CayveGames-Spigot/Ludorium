@@ -1,5 +1,5 @@
 games:
-  graceCountdown: 30
+  graceCountdown: 0
   ludo:
     enabled: true
     diceRollTimeout: 5

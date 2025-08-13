@@ -14,8 +14,8 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import me.cayve.ludorium.games.utils.PlayerStateManager;
 import me.cayve.ludorium.main.LudoriumPlugin;
-import me.cayve.ludorium.utils.PlayerStateManager;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
@@ -103,6 +103,8 @@ public abstract class GameLobby implements Listener {
 	
 	private void registerEvents() {
 		LudoriumPlugin.registerEvent(this);
+		
+		registerCountdownComplete(this::disable);
 		
 		Timer.register(countdown = new Task(lobbyKey).setDuration(COUNTDOWN_DURATION).setRefreshRate(1)
 				.registerOnUpdate(() -> {
@@ -263,7 +265,7 @@ public abstract class GameLobby implements Listener {
 	 * Called when the lobby countdown is completed
 	 * @param listener
 	 */
-	public void registerCountdownComplete(Runnable listener) { /*countdownCompleteEvent.add(listener);*/ }
+	public void registerCountdownComplete(Runnable listener) { countdownCompleteEvent.add(listener); }
 	
 	/**
 	 * Called when the lobby internally shuts down (usually after minimum player count loss)
@@ -276,6 +278,7 @@ public abstract class GameLobby implements Listener {
 	public int getPlayerCount() { return playerCount; }
 	public String getPlayerAt(int lobbyPosition) { return players[lobbyPosition]; }
 	public String getHost() { return host; }
+	public String getLobbyKey() { return lobbyKey; }
 	
 	/**
 	 * @return A sorted array of all lobby positions that players are occupying

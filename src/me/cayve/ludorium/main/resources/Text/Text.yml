@@ -19,6 +19,12 @@ in-game:
   startsIn: 'The game will start in <highlight><duration><reset>..'
   crouchToSkip: '<italic>(Crouch to skip - <highlight><count>/<total><reset>)'
   skipped: 'Skipped!'
+  ludo:
+    roll: '<label>`s turn - Rolled a <highlight><roll><reset>!'
+    reroll: '<label> rolled a 6, roll again!'
+    captured: '<label> captured <opponent-label>`s piece!'
+    blundered: '<label> blundered a piece!'
+    won: '<label> won the game!'
 wizards:
   started: 'Started the creation wizard'
   canceled: 'Creation wizard has been canceled'

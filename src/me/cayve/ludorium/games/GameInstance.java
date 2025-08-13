@@ -4,7 +4,7 @@ import me.cayve.ludorium.games.events.InstanceEventLog;
 
 public abstract class GameInstance {
 	
-	protected InstanceEventLog logger;
+	protected InstanceEventLog logger = new InstanceEventLog();
 	
 	public InstanceEventLog getLogger() { return logger; }
 }

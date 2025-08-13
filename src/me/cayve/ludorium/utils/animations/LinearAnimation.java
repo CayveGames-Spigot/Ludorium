@@ -2,16 +2,16 @@ package me.cayve.ludorium.utils.animations;
 
 public class LinearAnimation extends Animation<Float> {
 
-	private float min, max;
+	private float start, finish;
 	
-	public LinearAnimation(float min, float max) {
-		this.min = min;
-		this.max = max;
+	public LinearAnimation(float start, float finish) {
+		this.start = start;
+		this.finish = finish;
 	}
 	
 	@Override
 	public Float evaluate(float time) {
-		return ((max - min) * time) + min;
+		return ((finish - start) * time) + start;
 	}
 	
 }

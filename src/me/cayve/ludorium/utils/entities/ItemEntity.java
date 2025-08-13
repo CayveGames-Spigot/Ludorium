@@ -8,6 +8,11 @@ public class ItemEntity extends DisplayEntity<ItemDisplay> {
 	
 	private ItemStack model;
 	
+	/**
+	 * Constructor does not spawn the display. Use .spawn() manually
+	 * @param location
+	 * @param model
+	 */
 	public ItemEntity(Location location, ItemStack model) {
 		super(ItemDisplay.class, location);
 		

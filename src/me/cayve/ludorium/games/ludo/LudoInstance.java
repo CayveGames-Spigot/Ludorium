@@ -8,7 +8,6 @@ import me.cayve.ludorium.games.GameInstance;
 import me.cayve.ludorium.games.events.DiceRollEvent;
 import me.cayve.ludorium.games.events.TokenMoveEvent;
 import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
-import me.cayve.ludorium.games.ludo.events.PieceBlunderEvent;
 
 /**
  * @author Cayve
@@ -66,10 +65,9 @@ public class LudoInstance extends GameInstance {
 			for (int j = 0; j < 4; j++)
 				board[map.getStarterIndex(index, j)] = index + "-" + j; //ID of pieces are PLAYERINDEX-PIECE#
 		}
-		
-		onInstanceUpdate.run();
 	}
 	
+	public int getLastRoll() { return currentRoll; }
 	public void roll(int rollValue) {
 		currentRoll = rollValue;
 		logger.logEvent(new DiceRollEvent(getCurrentPlayerIndex(), rollValue));
@@ -154,8 +152,8 @@ public class LudoInstance extends GameInstance {
 	public int getWinnerPlayerIndex() { return winnerPlayerIndex; }
 	
 	private boolean doesPieceMatchCurrentPlayer(String pieceID) { return getPlayerIndexFromPiece(pieceID) == getCurrentPlayerIndex(); }
-	private int getPlayerIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(0)); }
-	private int getPieceNumberFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2)); }
+	public int getPlayerIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(0)); }
+	public int getPieceNumberFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2)); }
 	
 	private int getPieceIndex(String pieceID) {
 		for (int i = 0; i < board.length; i++)
@@ -353,7 +351,6 @@ public class LudoInstance extends GameInstance {
 				//Return the blundered piece
 				returnPieceToStart(tempID, eAction.BLUNDER);
 				
-				logger.logEvent(new PieceBlunderEvent(getCurrentPlayerIndex(), tempID));
 				return;
 			}
 		}

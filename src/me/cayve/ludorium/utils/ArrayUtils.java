@@ -4,6 +4,7 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class ArrayUtils {
 
@@ -24,6 +25,15 @@ public class ArrayUtils {
 			if (array[i] != null)
 				action.accept(array[i]);
 	}
+	
+	public static <T> T find(T[] array, Predicate<T> predicate) {
+		for (int i = 0; i < array.length; i++)
+			if (array[i] != null && predicate.test(array[i]))
+				return array[i];
+		return null;
+	}
+	
+	public static <T> boolean contains(T[] array, Predicate<T> predicate) { return find(array, predicate) != null; }
 	
 	/**
 	 * Maps an array to a new array type based on a mapping method

@@ -1,4 +1,4 @@
-package me.cayve.ludorium.utils;
+package me.cayve.ludorium.games.utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -228,6 +228,17 @@ public class PlayerStateManager implements Listener {
 		restorePlayerState(playerID, instance.playerProfiles.get(playerID).personalState);
 		
 		instance.playerProfiles.remove(playerID);
+	}
+	
+	/**
+	 * Refreshes a player's state to match the stored state
+	 * @param playerID
+	 */
+	public static void refreshPlayer(String playerID) {
+		if (!instance.playerProfiles.containsKey(playerID))
+			return;
+		
+		restorePlayerState(playerID, instance.playerProfiles.get(playerID).getActiveGameState());
 	}
 	
 	/**

@@ -1,25 +1,71 @@
 package me.cayve.ludorium.utils.animations;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.function.Consumer;
 
+import me.cayve.ludorium.utils.functionals.MultiConsumer;
+import me.cayve.ludorium.utils.functionals.MultiRunnable;
 import me.cayve.ludorium.utils.locational.Transform;
 import me.cayve.ludorium.utils.locational.Vector2D;
 import me.cayve.ludorium.utils.locational.Vector3D;
 
 public class Animator {
 
-	private Consumer<Transform> onUpdate;
-	private Runnable onComplete, onCanceled;
+	private class AnimatorListener {
+		private boolean isOneShot;
+		
+		private Consumer<Transform> onUpdate;
+		private Runnable onComplete, onCanceled;
+		
+		private AnimatorListener(boolean isOneShot, Consumer<Transform> onUpdate, Runnable onComplete, Runnable onCanceled) {
+			this.isOneShot = isOneShot;
+			this.onUpdate = onUpdate;
+			this.onComplete = onComplete;
+			this.onCanceled = onCanceled;
+		}
+	}
+	private MultiConsumer<Transform> onUpdate = new MultiConsumer<>();
+	private MultiRunnable onComplete = new MultiRunnable(), onCanceled = new MultiRunnable();
+	private ArrayList<AnimatorListener> listeners = new ArrayList<>();
 	
 	private Animation<Float> x, y, z, scale, pitch, yaw;
 	private Animation<Vector3D> position;
 	private Animation<Vector2D> rotation;
 	private Animation<Transform> transform;
 	
-	public Animator(Consumer<Transform> onUpdate, Runnable onComplete, Runnable onCanceled) {
-		this.onUpdate = onUpdate;
-		this.onComplete = onComplete;
-		this.onCanceled = onCanceled;
+	private void unregisterOneShots() {
+		Iterator<AnimatorListener> iterator = listeners.iterator();
+		while (iterator.hasNext()) {
+			AnimatorListener listener = iterator.next();
+			
+			if (!listener.isOneShot)
+				continue;
+			
+			onUpdate.remove(listener.onUpdate);
+			onComplete.remove(listener.onComplete);
+			onCanceled.remove(listener.onCanceled);
+			
+			iterator.remove();
+		}
+	}
+	
+	public void registerListeners(boolean isOneShot, Consumer<Transform> onUpdate, Runnable onComplete, Runnable onCanceled) {
+		if (isOneShot)
+			listeners.add(new AnimatorListener(isOneShot, onUpdate, onComplete, onCanceled));
+		
+		this.onComplete.remove(this::unregisterOneShots);
+		this.onCanceled.remove(this::unregisterOneShots);
+		
+		if (onUpdate != null)
+			this.onUpdate.add(onUpdate);
+		if (onComplete != null)
+			this.onComplete.add(onComplete);
+		if (onCanceled != null)
+			this.onCanceled.add(onCanceled);
+		
+		this.onComplete.add(this::unregisterOneShots);
+		this.onCanceled.add(this::unregisterOneShots);
 	}
 	
 	/**

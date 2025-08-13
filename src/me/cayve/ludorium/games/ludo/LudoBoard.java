@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import me.cayve.ludorium.games.boards.BlockTileMap;
@@ -12,16 +13,20 @@ import me.cayve.ludorium.games.boards.TileMapManager;
 import me.cayve.ludorium.games.boards.TokenTileMap;
 import me.cayve.ludorium.games.events.InstanceEvent;
 import me.cayve.ludorium.games.events.TokenMoveEvent;
+import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
 import me.cayve.ludorium.games.lobbies.InteractionLobby;
+import me.cayve.ludorium.games.utils.CustomModel;
+import me.cayve.ludorium.games.utils.GameDie;
 import me.cayve.ludorium.utils.Config;
-import me.cayve.ludorium.utils.CustomModel;
-import me.cayve.ludorium.utils.DiceRoll;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
+import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 import me.cayve.ludorium.utils.locational.Vector2D;
 import me.cayve.ludorium.ymls.TextYml;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class LudoBoard extends GameBoard {
 
@@ -35,9 +40,9 @@ public class LudoBoard extends GameBoard {
 	
 	private Location origin;
 	
-	private DiceRoll dice;
+	private GameDie dice;
 	
-	private Task rollTimer, selectTimer;
+	private Task rollTimer, selectTimer, endGameTimer;
 	private StateMachine states;
 	
 	/**
@@ -54,9 +59,9 @@ public class LudoBoard extends GameBoard {
 		
 		tileMaps = new TileMapManager(this::onTileSelected);
 		
-		dice = new DiceRoll();
-		
 		generateLobby();
+		
+		dice = new GameDie(lobby.getLobbyKey(), 1);
 	}
 	
 	private void initializeTileMaps(Location origin) {
@@ -75,16 +80,25 @@ public class LudoBoard extends GameBoard {
 	private void createStates() {
 		rollTimer 	= Timer.register(new Task(uniqueID).setDuration((float)Config.getDouble(Ludo.class, "diceRollTimeout")).pause());
 		selectTimer = Timer.register(new Task(uniqueID).setDuration((float)Config.getDouble(Ludo.class, "selectPieceTimeout")).pause());
+		endGameTimer = Timer.register(new Task(uniqueID)).setDuration(15).pause();
 		
 		rollTimer.registerOnComplete(dice::forceRoll);
+		endGameTimer.registerOnComplete(this::endGame);
 
 		states = new StateMachine()
 			.newState("ROLL")
 				.registerAction(() -> {
 					rollTimer.restart();
 					
-					dice.playerRoll(lobby.getPlayerAt(gameInstance.getCurrentPlayerIndex()), uniqueID, 1, (result) -> {
-						gameInstance.roll(result.get(0));
+					lobby.forEachOnlinePlayer((player) -> 
+						ToolbarMessage.sendImmediate(player, uniqueID + "-roll", 
+							TextYml.getText(player, "in-game.ludo.roll", 
+									Placeholder.parsed("roll", "..."),
+									TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+						.setDuration(rollTimer.getSecondsLeft()).showDuration());
+					
+					dice.playerRoll(lobby.getPlayerAt(gameInstance.getCurrentPlayerIndex()), (result) -> {
+						gameInstance.roll(result[0]);
 						rollTimer.pause();
 						states.skipTo("SELECT");
 					});
@@ -94,6 +108,13 @@ public class LudoBoard extends GameBoard {
 				.registerAction(() -> {
 					selectTimer.restart();
 					
+					
+					lobby.forEachOnlinePlayer((player) -> 
+						ToolbarMessage.clearSourceAndSendImmediate(player, uniqueID + "-roll", 
+							TextYml.getText(player, "in-game.ludo.roll", 
+									Placeholder.parsed("roll", gameInstance.getLastRoll() + ""),
+									TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+						.setDuration(selectTimer.getSecondsLeft()).showDuration());
 					
 				}).buildState();
 	}
@@ -108,9 +129,9 @@ public class LudoBoard extends GameBoard {
 			tokens.add(token);
 		}
 		
-		lobby = new InteractionLobby(2, boardMap.getColorCount(), tokens);
+		lobby = new InteractionLobby(2, boardMap.getColorCount(), true, tokens);
 		
-		lobby.registerPositionLabel((pos, player) -> TextYml.getText(player, "words.colors." + COLOR_ORDER[pos]));
+		lobby.registerPositionLabel(this::getPositionLabel);
 		
 		super.generateLobby();
 	}
@@ -123,16 +144,36 @@ public class LudoBoard extends GameBoard {
 		dice.destroy();
 	}
 	
+	private Component getPositionLabel(int position, Player reader) { return TextYml.getText(reader, "words.colors." + COLOR_ORDER[position]); }
+	
 	private void onGameInstanceUpdate() {
 		
 		if (gameInstance.getWinnerPlayerIndex() != -1)
 		{
-			endGame();
+			endGameTimer.restart();
+			
+			lobby.forEachOnlinePlayer((player) -> 
+				ToolbarMessage.clearSourceAndSendImmediate(player, uniqueID, 
+					TextYml.getText(player, "in-game.ludo.won", 
+							TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+				.setDuration(endGameTimer.getSecondsLeft()).showDuration());
+			
 			return;
 		}
 		for (InstanceEvent event : gameInstance.getLogger().getUnprocessed()) {
 			if (event instanceof TokenMoveEvent moveEvent) {
 				((TokenTileMap) tileMaps.getMap(1)).moveToken(moveEvent.getTokenID(), moveEvent.getPath(), true, null, null);
+				
+				if (moveEvent.getAction() == eAction.BLUNDER)
+					lobby.forEachOnlinePlayer((player) -> ToolbarMessage.sendImmediate(player, uniqueID, 
+							TextYml.getText(player, "in-game.ludo.blundered", 
+									TextYml.tag("label", getPositionLabel(moveEvent.getPlayerTurn(), player)))));
+				if (moveEvent.getAction() == eAction.CAPTURE)
+					lobby.forEachOnlinePlayer((player) -> ToolbarMessage.sendImmediate(player, uniqueID, 
+							TextYml.getText(player, "in-game.ludo.captured", 
+									TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player)),
+									TextYml.tag("oponent-label", 
+											getPositionLabel(gameInstance.getPlayerIndexFromPiece(moveEvent.getTokenID()), player)))));
 			}
 		}
 		
@@ -153,10 +194,10 @@ public class LudoBoard extends GameBoard {
 
 	@Override
 	protected void startGame() {
+		createStates();
 		initializeTileMaps(origin);
 		gameInstance = new LudoInstance(this::onGameInstanceUpdate, lobby.getOccupiedPositions(), boardMap, false, false, false);
-		
-		createStates();
+		onGameInstanceUpdate();
 	}
 
 	@Override

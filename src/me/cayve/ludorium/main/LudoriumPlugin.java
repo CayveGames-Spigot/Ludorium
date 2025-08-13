@@ -2,7 +2,6 @@ package me.cayve.ludorium.main;
 
 import java.util.logging.Level;
 
-import org.bukkit.configuration.serialization.ConfigurationSerialization;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -10,12 +9,11 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.cayve.ludorium.commands.LudoriumCommand;
 import me.cayve.ludorium.games.GameRegistrar;
 import me.cayve.ludorium.games.boards.BoardList;
+import me.cayve.ludorium.games.utils.PlayerStateManager;
 import me.cayve.ludorium.games.wizards.GameCreationWizard;
-import me.cayve.ludorium.utils.PlayerStateManager;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.entities.LudoriumEntity;
-import me.cayve.ludorium.utils.locational.Vector3D;
 
 public class LudoriumPlugin extends JavaPlugin {
 
@@ -53,9 +51,7 @@ public class LudoriumPlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		saveDefaultConfig();
-		
-		ConfigurationSerialization.registerClass(Vector3D.class);
-		
+
 		LudoriumEntity.initialize();
 		Timer.initialize();
 		ToolbarMessage.initialize();

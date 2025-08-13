@@ -1,5 +1,6 @@
 package me.cayve.ludorium.utils.entities;
 
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.bukkit.Location;
@@ -22,26 +23,50 @@ import me.cayve.ludorium.utils.locational.Vector3D;
 public class DisplayEntity<T extends Display> implements Listener {
 	
 	protected T display;
+	private String displayID;
 	
 	protected Transform transform;
 	private Class<T> type;
 
 	private Animator animator;
 	private boolean isSpawned; //For animation consistency
-	private MultiConsumer<DisplayEntity<T>> onAnimatorCompleteEvent = new MultiConsumer<>();
 	private MultiConsumer<DisplayEntity<T>> onDestroyEvent = new MultiConsumer<>();
 	
 	private Interaction interaction;
 	private Vector2D interactionBounds;
 	private MultiConsumer<Player> onInteractedWith = new MultiConsumer<>();
 	
+	/**
+	 * Constructor does not spawn the display. Use .spawn() manually
+	 */
 	public DisplayEntity(Class<T> type, Location location) {
 		this.type = type;
 		this.transform = new Transform();
 		this.transform.setLocation(location);
+		this.displayID = UUID.randomUUID().toString();
 		
-		animator = new Animator(this::onAnimatorUpdate, this::onAnimatorComplete, this::resetToOrigin);
+		instantiateAnimator();
 	}
+	
+	/**
+	 * Constructor does not spawn the display. Use .spawn() manually
+	 */
+	public DisplayEntity(Class<T> type, Location location, String displayID) {
+		this.type = type;
+		this.transform = new Transform();
+		this.transform.setLocation(location);
+		this.displayID = displayID;
+		
+		instantiateAnimator();
+	}
+	
+	private void instantiateAnimator() {
+		animator = new Animator();
+		
+		animator.registerListeners(false, this::onAnimatorUpdate, this::onAnimatorComplete, this::resetToOrigin);
+	}
+	
+	public String getID() { return displayID; }
 	
 	/**
 	 * Enables an interaction for the entity with the given bounds
@@ -208,12 +233,6 @@ public class DisplayEntity<T extends Display> implements Listener {
 	public void registerOnInteractedWith(Consumer<Player> listener) { onInteractedWith.add(listener); }
 	
 	/**
-	 * Registers a listener for when the animator completes all animations
-	 * @param listener
-	 */
-	public void registerOnAnimatorComplete(Consumer<DisplayEntity<T>> listener) { onAnimatorCompleteEvent.add(listener); }
-	
-	/**
 	 * Registers a listener for when the entity is destroyed
 	 * @param listener
 	 */
@@ -236,8 +255,6 @@ public class DisplayEntity<T extends Display> implements Listener {
 	private void onAnimatorComplete() {
 		if (!isSpawned) //If the display isn't supposed to be activated, remove it after animator completes
 			remove();
-		
-		onAnimatorCompleteEvent.accept(this);
 	}
 	
 	/**
