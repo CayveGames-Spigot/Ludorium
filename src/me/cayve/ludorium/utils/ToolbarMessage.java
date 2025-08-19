@@ -378,7 +378,9 @@ public class ToolbarMessage {
 
 		if (message != null) {
 			if (message.template.showDuration)
-				messageComponent.append(Component.text(ProgressBar.generate(message.getElapsedPercent())));
+				messageComponent = messageComponent
+					.append(Component.text(" "))
+					.append(Component.text(ProgressBar.generate(message.getElapsedPercent())));
 			
 			NamedTextColor textColor = switch(message.template.type) {
 				case Message.eType.ERROR -> NamedTextColor.RED;

@@ -6,7 +6,7 @@ import java.util.function.Function;
 
 import org.apache.logging.log4j.util.TriConsumer;
 
-public class Grid3D<T> {
+public class Grid<T> {
 
 	private final T[][][] data;
 	private final int width;
@@ -14,12 +14,16 @@ public class Grid3D<T> {
 	private final int depth;
 	
 	@SuppressWarnings("unchecked")
-	public Grid3D(Class<T> type, int width, int height, int depth) {
+	public Grid(Class<T> type, int width, int height, int depth) {
 		this.width = width;
 		this.height = height;
 		this.depth = depth;
 		
 		data = (T[][][]) Array.newInstance(type, width, height, depth);
+	}
+	
+	public T get(int x, int z) {
+		return data[x][height - 1][z];
 	}
 	
 	public T get(int x, int y, int z) {
@@ -28,6 +32,10 @@ public class Grid3D<T> {
 	
 	public void set(int x, int y, int z, T element) {
 		data[x][y][z] = element;
+	}
+	
+	public void set(int x, int z, T element) {
+		data[x][height - 1][z] = element;
 	}
 	
 	public int getWidth() { return width; }
@@ -68,8 +76,8 @@ public class Grid3D<T> {
 	 * @param mapMethod
 	 * @return
 	 */
-	public <R> Grid3D<R> map(Class<R> type, Function<T, R> mapMethod) {
-		Grid3D<R> newGrid = new Grid3D<R>(type, width, height, depth);
+	public <R> Grid<R> map(Class<R> type, Function<T, R> mapMethod) {
+		Grid<R> newGrid = new Grid<R>(type, width, height, depth);
 		forEachIndex((x, y, z) -> newGrid.set(x, y, z, mapMethod.apply(get(x, y, z))));
 		return newGrid;
 	}

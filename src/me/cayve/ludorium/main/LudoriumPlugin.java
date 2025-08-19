@@ -20,15 +20,29 @@ public class LudoriumPlugin extends JavaPlugin {
 	private static boolean DEVELOPER_MODE = true;
 	
 	private static LudoriumPlugin main;
-	
-	private boolean loadFailed = false;
-	
+
 	public static void registerEvent(Listener listener) {
 		main.getServer().getPluginManager().registerEvents(listener, main);
 	}
 	
 	public static LudoriumPlugin getPlugin() { return main; }
 	
+	/**
+	 * Runs an action guarded with a default try/catch and prints and stack trace caught
+	 * @param action
+	 */
+	public static void callSafely(Runnable action) {
+		try {
+			action.run();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * Prints a debug message if the plugin is currently in developer mode
+	 * @param debugMessage
+	 */
 	public static void debug(String debugMessage) 
 	{ 
 		if (isDeveloperMode())
@@ -57,16 +71,8 @@ public class LudoriumPlugin extends JavaPlugin {
 		ToolbarMessage.initialize();
 		PlayerStateManager.initialize();
 		
-		try {
-			GameRegistrar.forEachGame(x -> x.load());
-		} catch (Exception e) {
-			loadFailed = true;
-			
-			main.getServer().getLogger().log(Level.SEVERE, 
-					"Something went wrong while trying to load your Ludorium boards. To avoid overwriting your saved boards, Ludorium will disable.");
-			e.printStackTrace();
-			getServer().getPluginManager().disablePlugin(this);
-		}
+		//Each game type is guarded as well, per instance is up to type implementation
+		callSafely(() -> GameRegistrar.forEachGame(x -> x.load())); 
 	}
 	
 	public void reloadPlugin() 
@@ -76,13 +82,13 @@ public class LudoriumPlugin extends JavaPlugin {
 	
 	@Override
 	public void onDisable() {
-		if (!loadFailed)
-			GameRegistrar.forEachGame(x -> x.save());
+		//Each game type is guarded as well, per instance is up to type implementation
+		callSafely(() -> GameRegistrar.forEachGame(x -> x.save())); 
 		
-		GameCreationWizard.destroyAll();
-		BoardList.removeAll();
+		callSafely(GameCreationWizard::destroyAll);
+		callSafely(BoardList::removeAll); //Each board removal is guarded as well
 
-		LudoriumCommand.uninitialize();
-		PlayerStateManager.uninitialize();
+		callSafely(PlayerStateManager::uninitialize); //Each player state removal is guarded as well
+		callSafely(LudoriumEntity::uninitialize);
 	}
 }

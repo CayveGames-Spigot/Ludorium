@@ -7,14 +7,14 @@ import java.util.UUID;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
-import me.cayve.ludorium.utils.functionals.MultiRunnable;
+import me.cayve.ludorium.utils.functionals.Event0;
 
 public class Timer {
 
 	public static class Task {
-		private MultiRunnable onComplete = new MultiRunnable();
-		private MultiRunnable onUpdate = new MultiRunnable();
-		private MultiRunnable onCanceled = new MultiRunnable();
+		private Event0 onComplete = new Event0();
+		private Event0 onUpdate = new Event0();
+		private Event0 onCanceled = new Event0();
 		
 		private long duration = -1;
 		private long refreshRate = -1;
@@ -75,20 +75,17 @@ public class Timer {
 		}
 	
 		public Task registerOnComplete(Runnable listener) {
-			if (listener != null)
-				onComplete.add(listener);
+			onComplete.subscribe(listener);
 			return this;
 		}
 		
 		public Task registerOnUpdate(Runnable listener) {
-			if (listener != null)
-				onUpdate.add(listener);
+			onUpdate.subscribe(listener);
 			return this;
 		}
 		
 		public Task registerOnCanceled(Runnable listener) {
-			if (listener != null)
-				onCanceled.add(listener);
+			onCanceled.subscribe(listener);
 			return this;
 		}
 		

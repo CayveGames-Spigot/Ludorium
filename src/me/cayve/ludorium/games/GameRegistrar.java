@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import org.reflections.Reflections;
 
 import me.cayve.ludorium.main.LudoriumException;
+import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.utils.Config;
 
 public class GameRegistrar {
@@ -55,7 +56,8 @@ public class GameRegistrar {
 	
 	public static void forEachGame(Consumer<Game> action) {
 		for (Game game : registeredGames.keySet())
-			action.accept(game);
+			//Guarded to protect load and save calls
+			LudoriumPlugin.callSafely(() -> action.accept(game));
 	}
 	
 	public static String getPrefix(Class<? extends Game> type) {

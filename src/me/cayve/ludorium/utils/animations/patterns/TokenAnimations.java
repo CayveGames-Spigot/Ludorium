@@ -5,6 +5,7 @@ import org.bukkit.Location;
 import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.LinearAnimation;
 import me.cayve.ludorium.utils.animations.SinWaveAnimation;
+import me.cayve.ludorium.utils.functionals.Event.Subscription;
 
 public class TokenAnimations {
 	
@@ -43,6 +44,8 @@ public class TokenAnimations {
 		animator.setXAnimation(new LinearAnimation((float)origin.getX(), (float)target.getX()).setDuration(jumpDuration));
 		animator.setYAnimation(new SinWaveAnimation(amplitude).subanim(0, .5f).setDuration(jumpDuration));
 		animator.setZAnimation(new LinearAnimation((float)origin.getZ(), (float)target.getZ()).setDuration(jumpDuration));
-		animator.registerListeners(true, null, onComplete, null);
+		
+		Subscription subscription = animator.onCompleted().subscribe(onComplete, true);
+		animator.onCanceled().subscribe(subscription::close, true);
 	}
 }

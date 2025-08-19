@@ -25,7 +25,7 @@ public abstract class GameBoard {
 		if (lobby == null)
 			return;
 		
-		lobby.registerCountdownComplete(this::startGame);
+		lobby.onCountdownComplete.subscribe(this::startGame);
 		lobby.enable();
 	}
 	

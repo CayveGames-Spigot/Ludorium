@@ -1,6 +1,8 @@
 package me.cayve.ludorium.utils.locational;
 
 import org.bukkit.Location;
+import org.bukkit.util.Vector;
+import org.joml.Vector3f;
 
 public class LocationUtil {
 
@@ -27,11 +29,19 @@ public class LocationUtil {
 		return newLoc;
 	}
 
-	public static Location relativeLocation(Location loc, Vector3D vector) {
+	public static Location relativeLocation(Location loc, Vector3f vector) {
 		Location newLoc = loc.clone();
 		newLoc.setX(loc.getX() + vector.x);
 		newLoc.setY(loc.getY() + vector.y);
 		newLoc.setZ(loc.getZ() + vector.z);
+		return newLoc;
+	}
+	
+	public static Location relativeLocation(Location loc, Vector vector) {
+		Location newLoc = loc.clone();
+		newLoc.setX(loc.getX() + vector.getX());
+		newLoc.setY(loc.getY() + vector.getY());
+		newLoc.setZ(loc.getZ() + vector.getZ());
 		return newLoc;
 	}
 

@@ -20,8 +20,9 @@ import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
-import me.cayve.ludorium.utils.functionals.MultiConsumer;
-import me.cayve.ludorium.utils.functionals.MultiRunnable;
+import me.cayve.ludorium.utils.functionals.Event.Subscriber;
+import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.functionals.Event1;
 import me.cayve.ludorium.ymls.TextYml;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -52,11 +53,17 @@ public abstract class GameLobby implements Listener {
 	
 	private boolean storeInventory = false, forceInventoryState;
 	
-	private MultiConsumer<Integer> lobbyJoinEvent = new MultiConsumer<>();
-	private MultiConsumer<Integer> lobbyLeaveEvent = new MultiConsumer<>();
+	private Event1<Integer> lobbyJoinEvent = new Event1<>();
+	private Event1<Integer> lobbyLeaveEvent = new Event1<>();
 	
-	private MultiRunnable onShutdownEvent = new MultiRunnable(); //Called when the lobby is shutdown after running
-	private MultiRunnable countdownCompleteEvent = new MultiRunnable();
+	private Event0 shutdownEvent = new Event0(); //Called when the lobby is shutdown after running
+	private Event0 countdownCompleteEvent = new Event0();
+	
+	public Subscriber<Consumer<Integer>> onLobbyJoin = lobbyJoinEvent.getSubscriber(),
+										onLobbyLeave = lobbyLeaveEvent.getSubscriber();
+	public Subscriber<Runnable> onShutdown = shutdownEvent.getSubscriber(),
+								onCountdownComplete = countdownCompleteEvent.getSubscriber();
+	
 	private Task countdown;
 	
 	/**
@@ -104,7 +111,7 @@ public abstract class GameLobby implements Listener {
 	private void registerEvents() {
 		LudoriumPlugin.registerEvent(this);
 		
-		registerCountdownComplete(this::disable);
+		onCountdownComplete.subscribe(this::disable);
 		
 		Timer.register(countdown = new Task(lobbyKey).setDuration(COUNTDOWN_DURATION).setRefreshRate(1)
 				.registerOnUpdate(() -> {
@@ -150,7 +157,7 @@ public abstract class GameLobby implements Listener {
 	}
 	protected void onMinimumLost() {
 		if (!isEnabled()) //If the game is running and the minimum player count is lost, shut down the lobby
-			onShutdownEvent.run();
+			shutdownEvent.run();
 		else
 		{
 			countdown.pause();
@@ -246,33 +253,18 @@ public abstract class GameLobby implements Listener {
 	private void promptJoinLeave(String messagePath, int lobbyPosition, OfflinePlayer player) {
 		forEachOnlinePlayer(x -> ToolbarMessage.sendImmediate(x, lobbyKey, 
 					TextYml.getText(x, messagePath, 
-						TextYml.tag(
+						Placeholder.component(
 							"label", (getPositionLabel(lobbyPosition, x) == null ? Component.empty() :
 							Component.text(" (")
 							.append(getPositionLabel(lobbyPosition, x))
 							.append(Component.text(")")))
 						),
-						TextYml.tag("player", player.isOnline() ? player.getPlayer().displayName() : Component.text(player.getName()))
+						Placeholder.component("player", player.isOnline() ? player.getPlayer().displayName() : Component.text(player.getName()))
 					)
 				)				
 				.clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
 	}
 	
-	public void registerJoinListener(Consumer<Integer> listener) { lobbyJoinEvent.add(listener); }
-	public void registerLeaveListener(Consumer<Integer> listener) { lobbyLeaveEvent.add(listener); }
-	
-	/**
-	 * Called when the lobby countdown is completed
-	 * @param listener
-	 */
-	public void registerCountdownComplete(Runnable listener) { countdownCompleteEvent.add(listener); }
-	
-	/**
-	 * Called when the lobby internally shuts down (usually after minimum player count loss)
-	 * @param listener
-	 */
-	public void registerShutdownEvent(Runnable listener) { onShutdownEvent.add(listener); }
-
 	public int getPlayerMax() { return maximum; }
 	public int getPlayerMin() { return minimum; }
 	public int getPlayerCount() { return playerCount; }

@@ -59,18 +59,23 @@ public class SubmitAction extends PlayerAction implements Listener {
 		}).pause());
 		
 		reminderTask = Timer.register(new Task(tsk).registerOnUpdate(() -> {
-			if (!player.isSneaking())
-				ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold",
-						Placeholder.parsed("context", 
-								(resultType == eResult.BOTH || resultType == eResult.SUBMIT ?
-										TextYml.getText(player, "actions.crouch.confirm") : "") + 
-								(resultType == eResult.BOTH ? "/" : "") + 
-								(resultType == eResult.BOTH || resultType == eResult.CANCEL ?
-										TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]) : ""))))
+			if (player.isSneaking()) return;
+			
+			Component context = (resultType == eResult.BOTH || resultType == eResult.SUBMIT) ? 
+					TextYml.getText(player, "actions.crouch.confirm") : Component.empty();
+			
+			if (resultType == eResult.BOTH)
+				context = context.append(Component.text("/"));
+			
+			if (resultType == eResult.BOTH || resultType == eResult.CANCEL)
+				context = context.append(TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]));
+			
+			ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold", Placeholder.component("context", context)))
 				.clearIfSkipped();
+			
 		}).setRefreshRate(30));
 	}
-	
+
 	public void restartReminder() {
 		reminderTask.setRefreshRate(10);
 		reminderTask.restart();
@@ -82,16 +87,16 @@ public class SubmitAction extends PlayerAction implements Listener {
 		if (resultType == eResult.SUBMIT || resultType == eResult.BOTH)
 		{
 			if (submitTask.isComplete())
-				message.append(TextYml.getText(player, "actions.crouch.confirmed"))
+				message = message.append(TextYml.getText(player, "actions.crouch.confirmed"))
 					.append(MiniMessage.miniMessage().deserialize(ProgressBar.generate(submitTask.getPercentTimeCompleted(), "[<green>%i%o<reset>]")));
 			else
-				message.append(TextYml.getText(player, "actions.crouch.confirm"))
+				message = message.append(TextYml.getText(player, "actions.crouch.confirm"))
 					.append(Component.text(ProgressBar.generate(submitTask.getPercentTimeCompleted())));
 		}
 		if (resultType == eResult.BOTH)
-			message.append(Component.text(ProgressBar.generate(transitionTask.getPercentTimeCompleted(), 6, " %i %o ")));
+			message = message.append(Component.text(ProgressBar.generate(transitionTask.getPercentTimeCompleted(), 6, " %i %o ")));
 		if (resultType == eResult.BOTH || resultType == eResult.CANCEL)
-			message.append(TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]))
+			message = message.append(TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]))
 				.append(Component.text(ProgressBar.generate(cancelTask.getPercentTimeCompleted())));
 		
 		if (messageObject != null)

@@ -147,16 +147,8 @@ public class PlayerStateManager implements Listener {
 		HandlerList.unregisterAll(this);
 		
 		for (String playerID : playerProfiles.keySet())
-		{
 			//If any inventory restore fails, all others don't
-			try {
-				
-				deleteProfile(playerID);
-			
-			} catch (Exception exception) {
-				exception.printStackTrace();
-			}
-		}
+			LudoriumPlugin.callSafely(() -> deleteProfile(playerID));
 	}
 	
 	/**

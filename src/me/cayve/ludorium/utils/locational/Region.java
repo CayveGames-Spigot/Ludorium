@@ -1,11 +1,8 @@
 package me.cayve.ludorium.utils.locational;
 
-import java.util.ArrayList;
-
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-
-import me.cayve.ludorium.utils.entities.BlockEntity;
+import org.joml.Vector2i;
 
 public class Region {
 	private float xLength, yLength, zLength;
@@ -38,8 +35,8 @@ public class Region {
 	 * Returns the 3D grid of block locations between the minimum and maximum point of this region
 	 * @return
 	 */
-	public Grid3D<Location> get3DLocationGrid() {
-		Grid3D<Location> grid = new Grid3D<Location>(Location.class, 
+	public Grid<Location> getLocationGrid() {
+		Grid<Location> grid = new Grid<Location>(Location.class, 
 				(int)Math.floor(xLength), (int)Math.floor(yLength), (int)Math.floor(zLength));
 		
 		for (int x = 0; x < xLength; x++) {
@@ -51,52 +48,6 @@ public class Region {
 		}
 		
 		return grid;
-	}
-	
-	/**
-	 * Returns the grid of locations between the minimum and maximum point of this region.
-	 * Y is sourced from the minimum point
-	 * @return [x][z]
-	 */
-	public Grid2D<Location> get2DLocationGrid() {
-		Grid2D<Location> grid = new Grid2D<Location>(Location.class, (int)Math.floor(xLength), (int)Math.floor(zLength));
-		
-		for (int x = 0; x < xLength; x++) {
-				for (int z = 0; z < zLength; z++) {
-					grid.set(x, z, LocationUtil.relativeLocation(minimum, x, 0, z));
-				}
-		}
-		
-		return grid;
-	}
-	
-	/**
-	 * Returns the entire region in an array of locations
-	 * @return
-	 */
-	public ArrayList<Location> getLocationArray() {
-		ArrayList<Location> locations = new ArrayList<>();
-		
-		for (int y = 0; y < yLength; y++) {
-			for (int x = 0; x < xLength; x++) {
-				for (int z = 0; z < zLength; z++) {
-					locations.add(LocationUtil.relativeLocation(minimum, x, y, z));
-				}
-			}
-		}
-		
-		return locations;
-	}
-	
-	/**
-	 * Generates a grid of BlockEntities based on the blocks in the 2D region.
-	 * Can return null cells.
-	 * @return
-	 */
-	public Grid2D<BlockEntity> generate2DDisplayGrid() {
-		return get2DLocationGrid().map(BlockEntity.class, (location) -> {
-			return new BlockEntity(location, location.getBlock().getBlockData());
-		});
 	}
 	
 	public Location getCenter() {
@@ -112,7 +63,7 @@ public class Region {
 		Location center = getCenter();
 
 		return eDirection.fromVector(
-				new Vector2DInt(
+				new Vector2i(
 						center.getX() == location.getX() ? 0 : location.getX() > center.getX() ? 1 : -1,
 						center.getZ() == location.getZ() ? 0 : location.getZ() > center.getZ() ? 1 : -1
 				));

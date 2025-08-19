@@ -1,73 +1,31 @@
 package me.cayve.ludorium.utils.animations;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.function.Consumer;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 
-import me.cayve.ludorium.utils.functionals.MultiConsumer;
-import me.cayve.ludorium.utils.functionals.MultiRunnable;
+import me.cayve.ludorium.utils.entities.DisplayEntity.EntityComponent;
+import me.cayve.ludorium.utils.functionals.Event.Subscriber;
+import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.interfaces.Cancelable;
+import me.cayve.ludorium.utils.interfaces.Destroyable;
 import me.cayve.ludorium.utils.locational.Transform;
-import me.cayve.ludorium.utils.locational.Vector2D;
-import me.cayve.ludorium.utils.locational.Vector3D;
 
-public class Animator {
-
-	private class AnimatorListener {
-		private boolean isOneShot;
-		
-		private Consumer<Transform> onUpdate;
-		private Runnable onComplete, onCanceled;
-		
-		private AnimatorListener(boolean isOneShot, Consumer<Transform> onUpdate, Runnable onComplete, Runnable onCanceled) {
-			this.isOneShot = isOneShot;
-			this.onUpdate = onUpdate;
-			this.onComplete = onComplete;
-			this.onCanceled = onCanceled;
-		}
-	}
-	private MultiConsumer<Transform> onUpdate = new MultiConsumer<>();
-	private MultiRunnable onComplete = new MultiRunnable(), onCanceled = new MultiRunnable();
-	private ArrayList<AnimatorListener> listeners = new ArrayList<>();
+public class Animator implements EntityComponent, Destroyable, Cancelable {
+	
+	private Transform referenceTransform;
+	
+	private Event0 onCompleteEvent = new Event0();
+	private Event0 onCancelEvent = new Event0();
+	private Event0 onDestroyEvent = new Event0();
 	
 	private Animation<Float> x, y, z, scale, pitch, yaw;
-	private Animation<Vector3D> position;
-	private Animation<Vector2D> rotation;
+	private Animation<Vector3f> position;
+	private Animation<Vector2f> rotation;
 	private Animation<Transform> transform;
-	
-	private void unregisterOneShots() {
-		Iterator<AnimatorListener> iterator = listeners.iterator();
-		while (iterator.hasNext()) {
-			AnimatorListener listener = iterator.next();
-			
-			if (!listener.isOneShot)
-				continue;
-			
-			onUpdate.remove(listener.onUpdate);
-			onComplete.remove(listener.onComplete);
-			onCanceled.remove(listener.onCanceled);
-			
-			iterator.remove();
-		}
+
+	public Animator(Transform referenceTransform) {
+		this.referenceTransform = referenceTransform;
 	}
-	
-	public void registerListeners(boolean isOneShot, Consumer<Transform> onUpdate, Runnable onComplete, Runnable onCanceled) {
-		if (isOneShot)
-			listeners.add(new AnimatorListener(isOneShot, onUpdate, onComplete, onCanceled));
-		
-		this.onComplete.remove(this::unregisterOneShots);
-		this.onCanceled.remove(this::unregisterOneShots);
-		
-		if (onUpdate != null)
-			this.onUpdate.add(onUpdate);
-		if (onComplete != null)
-			this.onComplete.add(onComplete);
-		if (onCanceled != null)
-			this.onCanceled.add(onCanceled);
-		
-		this.onComplete.add(this::unregisterOneShots);
-		this.onCanceled.add(this::unregisterOneShots);
-	}
-	
 	/**
 	 * Sets the transform animation. Overwrites all other animations
 	 * @param animation
@@ -117,7 +75,7 @@ public class Animator {
 	 * Sets the position animation. Overwrites x, y, and z animations
 	 * @param animation
 	 */
-	public void setPositionAnimation(Animation<Vector3D> animation) {
+	public void setPositionAnimation(Animation<Vector3f> animation) {
 		position = animation;
 		setAnimationListeners(animation);
 		
@@ -159,7 +117,7 @@ public class Animator {
 	 * Sets the rotation animation. Overwrites pitch and yaw animation
 	 * @param animation
 	 */
-	public void setRotationAnimation(Animation<Vector2D> animation) {
+	public void setRotationAnimation(Animation<Vector2f> animation) {
 		rotation = animation;
 		setAnimationListeners(animation);
 		
@@ -169,7 +127,8 @@ public class Animator {
 	/**
 	 * Cancels all animations on all axes
 	 */
-	public void cancelAnimations() {
+	@Override
+	public void cancel() {
 		if (x != null)
 			x.destroy();
 		if (y != null)
@@ -189,14 +148,14 @@ public class Animator {
 		if (transform != null)
 			transform.destroy();
 		
-		onCanceled.run();
+		onCancelEvent.run();
 	}
 	
 	private void onAnyAnimationUpdate() {
 		Transform offset = new Transform();
 		
 		//Default is set to 1, but this is offset so it needs to be 0
-		offset.scale = 0;
+		offset.setScale(0);
 		
 		if (transform != null)
 			offset = transform.evaluate();
@@ -207,11 +166,11 @@ public class Animator {
 			else
 			{
 				if (x != null)
-					offset.x = x.evaluate();
+					offset.setX(x.evaluate());
 				if (y != null)
-					offset.y = y.evaluate();
+					offset.setY(y.evaluate());
 				if (z != null)
-					offset.z = z.evaluate();
+					offset.setZ(z.evaluate());
 			}
 			
 			if (rotation != null)
@@ -219,21 +178,21 @@ public class Animator {
 			else
 			{
 				if (pitch != null)
-					offset.pitch = pitch.evaluate();
+					offset.setPitch(pitch.evaluate());
 				if (yaw != null)
-					offset.yaw = yaw.evaluate();
+					offset.setYaw(yaw.evaluate());
 			}
 			
 			if (scale != null)
-				offset.scale = scale.evaluate();
+				offset.setScale(scale.evaluate());
 		}
 		
-		onUpdate.accept(offset);
+		referenceTransform.add(offset);
 	}
 	
 	private void onAnyAnimationComplete() {
 		if (!isAnimating())
-			onComplete.run();
+			onCompleteEvent.run();
 	}
 	
 	private void setAnimationListeners(Animation<?> animation) {
@@ -254,4 +213,15 @@ public class Animator {
 			isAnimating = true;
 		return isAnimating;
 	}
+	
+	@Override
+	public void destroy() { 
+		cancel(); 
+		
+		onDestroyEvent.run();
+	}
+	
+	public Subscriber<Runnable> onCompleted() { return onCompleteEvent.getSubscriber(); }
+	@Override public Subscriber<Runnable> onCanceled() { return onCancelEvent.getSubscriber(); }
+	@Override public Subscriber<Runnable> onDestroyed() { return onDestroyEvent.getSubscriber(); }
 }

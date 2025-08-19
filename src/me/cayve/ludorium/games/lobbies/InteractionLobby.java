@@ -2,11 +2,13 @@ package me.cayve.ludorium.games.lobbies;
 
 import java.util.ArrayList;
 
+import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.Config;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
+import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.LinearAnimation;
 import me.cayve.ludorium.utils.animations.OffsetAnimation;
 import me.cayve.ludorium.utils.animations.SinWaveAnimation;
@@ -59,9 +61,9 @@ public class InteractionLobby extends GameLobby {
 	}
 	
 	private void registerEvents() {
-		registerJoinListener((index) -> displays.get(index).getAnimator().cancelAnimations());
+		onLobbyJoin.subscribe((index) -> displays.get(index).getComponent(Animator.class).cancel());
 		
-		registerLeaveListener((index) -> playIdleAnimation(displays.get(index)));
+		onLobbyLeave.subscribe((index) -> playIdleAnimation(displays.get(index)));
 		
 		Timer.register(graceCountdown = new Task(lobbyKey)
 				.setDuration(Config.getInteger("games.graceCountdown") - COUNTDOWN_DURATION).setRefreshRate(.1f)
@@ -102,7 +104,7 @@ public class InteractionLobby extends GameLobby {
 		
 		for (ItemEntity display : displays)
 		{
-			display.spawn();
+			display.enable();
 			playIdleAnimation(display);
 		}
 	}
@@ -112,7 +114,7 @@ public class InteractionLobby extends GameLobby {
 		super.disable();
 		
 		for (DisplayEntity<?> display : displays)
-			display.remove();
+			display.disable();
 	}
 	
 	@Override
@@ -142,14 +144,14 @@ public class InteractionLobby extends GameLobby {
 	}
 	
 	private void addDisplay(ItemEntity token, int lobbyPosition) {
-		token.registerOnInteractedWith((player) -> { onInteraction(player.getUniqueId().toString(), lobbyPosition); });
+		token.getComponent(Collider.class).onInteracted().subscribe((player) -> { onInteraction(player.getUniqueId().toString(), lobbyPosition); });
 		
 		displays.add(token);
 	}
 	
 	private void playIdleAnimation(ItemEntity token) {
-		token.getAnimator().setYawAnimation(new LinearAnimation(0, 360).loops().setSpeed(.4f).randomize());
-		token.getAnimator().setYAnimation(new OffsetAnimation(1, new SinWaveAnimation(.3f)).loops().setSpeed(.2f).randomize());
+		token.getComponent(Animator.class).setYawAnimation(new LinearAnimation(0, 360).loops().setSpeed(.4f).randomize());
+		token.getComponent(Animator.class).setYAnimation(new OffsetAnimation(1, new SinWaveAnimation(.3f)).loops().setSpeed(.2f).randomize());
 	}
 	
 	private void onInteraction(String playerID, int lobbyPosition) {

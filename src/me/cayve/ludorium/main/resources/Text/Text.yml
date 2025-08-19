@@ -30,9 +30,6 @@ wizards:
   canceled: 'Creation wizard has been canceled'
   completed: 'Game instance has been created successfully!'
   ludo:
-    attemptingAutomatic: 'Automatic mode will attempt to identify the board in a given region'
-    identifiedBoard: 'Board identified! Please watch the following animation to confirm.'
-    noBoardIdentified: 'Could not identify board. Please use manual mode to define board. Quitting wizard..'
     colorVerification: 'Verify board colors go in clockwise order of: <colors>'
     selectTiles: 'Going clockwise, please select all tiles starting at the <color> out'
     selectHome: 'In order, select the <color> home tiles'
@@ -54,9 +51,9 @@ actions:
     skip: '<red>Skip<reset>..'
 words:
   colors:
-    red: '<red>Red<reset>'
-    yellow: '<yellow>Yellow<reset>'
-    green: '<green>Green<reset>'
-    blue: '<blue>Blue<reset>'
-    purple: '<light_purple>Purple<reset>'
-    black: '<dark_gray>Black<reset>'
+    red: '<red>Red'
+    yellow: '<yellow>Yellow'
+    green: '<green>Green'
+    blue: '<blue>Blue'
+    purple: '<light_purple>Purple'
+    black: '<dark_gray>Black'

@@ -11,7 +11,13 @@ public class BoardList {
 	
 	public static boolean remove(GameBoard board) 
 	{
-		board.destroy();
+		//Guard to protect removeAll() from failing entirely
+		try {
+			board.destroy();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		return activeBoards.remove(board);
 	}
 	

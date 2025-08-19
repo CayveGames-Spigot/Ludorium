@@ -39,7 +39,8 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 	private boolean animateCompletion = true;
 	
 	//Constructor for selecting multiple blocks
-	public SelectBlocksAction(Player player, int blockCount, boolean allowSame, Consumer<PlayerAction> successCallback, Consumer<PlayerAction> failureCallback) {
+	public SelectBlocksAction(Player player, int blockCount, boolean allowSame, Consumer<PlayerAction> successCallback, 
+			Consumer<PlayerAction> failureCallback) {
 		super(player, successCallback, failureCallback);
 		this.blockCount = blockCount;
 		this.allowSame = allowSame;
@@ -84,7 +85,8 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 				!event.getPlayer().getUniqueId().equals(player.getUniqueId())) return;
 		
 		if (selectedBlocks.contains(event.getClickedBlock()) && !allowSame) {
-			ToolbarMessage.clearSourceAndSendImmediate(player, tsk, TextYml.getText(player, "actions.selectBlocks.sameBlock")).setType(eType.ERROR);
+			ToolbarMessage.clearSourceAndSendImmediate(player, tsk, 
+					TextYml.getText(player, "actions.selectBlocks.sameBlock")).setType(eType.ERROR);
 			return;
 		}
 		
@@ -114,12 +116,16 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		//If neither animation cycles will happen, don't even register a new entity
 		if (!animateSelection && !animateCompletion) return;
 		
-		BlockEntity newAnimation = new BlockEntity(block.getLocation(), block.getBlockData());
+		BlockEntity newAnimation = new BlockEntity(block.getLocation(), block.getBlockData(),
+				entity -> new Animator(entity.getDisplayTransform()));
 		
 		activeAnimations.add(newAnimation);
 		
 		if (animateSelection && !(blockCount == 1 && animateCompletion))
-			newAnimation.getAnimator().setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
+		{
+			newAnimation.getComponent(Animator.class).onCompleted().subscribe(newAnimation::disable);
+			newAnimation.getComponent(Animator.class).setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
+		}
 	}
 	
 	private void finalizeAction() {
@@ -137,7 +143,8 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		float overlap = 0.3f + (0.45f * (1 - weight));
 
 		ArrayAnimations.wave(tsk, 
-				ArrayUtils.map(ArrayUtils.toArray(activeAnimations, DisplayEntity.class), Animator.class, (entity) -> entity.getAnimator()), 
+				ArrayUtils.map(ArrayUtils.toArray(activeAnimations, DisplayEntity.class), Animator.class, 
+				(entity) -> entity.getComponent(Animator.class)), 
 				duration, overlap, .3f, .1f);
 		
 		delayedPublish(duration);

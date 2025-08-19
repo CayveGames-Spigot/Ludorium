@@ -11,7 +11,7 @@ import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.patterns.GridAnimations;
 import me.cayve.ludorium.utils.entities.BlockEntity;
-import me.cayve.ludorium.utils.locational.Grid2D;
+import me.cayve.ludorium.utils.locational.Grid;
 import me.cayve.ludorium.utils.locational.Region;
 import me.cayve.ludorium.ymls.TextYml;
 import net.kyori.adventure.text.Component;
@@ -27,7 +27,7 @@ public class SelectRegionAction extends PlayerAction {
 	//Product
 	private Region region;
 	
-	private Grid2D<BlockEntity> animationGrid;
+	private Grid<BlockEntity> animationGrid;
 	private final float ANIMATION_DURATION = 2;
 	
 	private boolean animateSelection = true;
@@ -51,7 +51,7 @@ public class SelectRegionAction extends PlayerAction {
 		
 		ToolbarMessage.clearSourceAndSend(player, tsk, 
 				TextYml.getText(player, "actions.region.selectFirst",
-					TextYml.tag("name", regionName),
+					Placeholder.component("name", regionName),
 					Placeholder.parsed("progress", ProgressBar.generate(0, 2))))
 			.setPermanent();
 		selectBlocksAction = new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCancelledAction).registerSelectEvent(this::onBlockSelected);
@@ -70,7 +70,7 @@ public class SelectRegionAction extends PlayerAction {
 		//Update message
 		ToolbarMessage.clearSourceAndSend(player, tsk, 
 				TextYml.getText(player, "actions.region.selectSecond",
-					TextYml.tag("name", regionName),
+					Placeholder.component("name", regionName),
 					Placeholder.parsed("progress", ProgressBar.generate(selectBlocksAction.getSelectedCount(), 2))))
 		.setPermanent();
 	}
@@ -89,10 +89,12 @@ public class SelectRegionAction extends PlayerAction {
 	protected void animateCompletion() {
 		if (!animateCompletion) return;
 		
-		animationGrid = region.generate2DDisplayGrid();
+		animationGrid = region.getLocationGrid().map(BlockEntity.class, 
+				loc -> new BlockEntity(loc, loc.getBlock().getBlockData(),
+						entity -> new Animator(entity.getDisplayTransform())));
 
 		GridAnimations.wave(tsk, 
-				animationGrid.map(Animator.class, (entity) -> entity.getAnimator()), 
+				animationGrid.map(Animator.class, (entity) -> entity.getComponent(Animator.class)), 
 					region.relativeDirection(selectBlocksAction.getBlocks().get(1)), 
 					ANIMATION_DURATION, 0.6f, .3f, .1f);
 	}
@@ -105,7 +107,7 @@ public class SelectRegionAction extends PlayerAction {
 		{
 			ToolbarMessage.clearSourceAndSend(player, tsk, 
 					TextYml.getText(player, "actions.region.selectFirst",
-						TextYml.tag("name", regionName),
+						Placeholder.component("name", regionName),
 						Placeholder.parsed("progress", ProgressBar.generate(2, 2))))
 			.setPermanent();
 		}

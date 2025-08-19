@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import org.bukkit.Location;
+import org.bukkit.util.Vector;
 
 import me.cayve.ludorium.utils.locational.LocationUtil;
 import me.cayve.ludorium.utils.locational.Region;
-import me.cayve.ludorium.utils.locational.Vector3D;
 
 /**
  * @author Cayve
@@ -29,13 +29,13 @@ public class LudoMap {
 	
 	private String mapID;
 
-	private Vector3D[] relativeLocations;
+	private Vector[] relativeLocations;
 	private ArrayList<Integer> safeSpaceIndexes = new ArrayList<>();
 	
 	private int tileCount;
 	private int colorCount;
 	
-	public LudoMap(Vector3D[] relativeMap, String mapID, int tileCount, boolean isSixPlayers) {
+	public LudoMap(Vector[] relativeMap, String mapID, int tileCount, boolean isSixPlayers) {
 		this.relativeLocations = relativeMap;
 		this.mapID = mapID;
 		
@@ -49,7 +49,7 @@ public class LudoMap {
 		this.tileCount = tiles.size();
 		this.colorCount = starters.size();
 		
-		relativeLocations = new Vector3D[tiles.size() + (homes.size() * HOME_TILE_COUNT) + 
+		relativeLocations = new Vector[tiles.size() + (homes.size() * HOME_TILE_COUNT) + 
 		                                 (starters.size() * STARTER_TILE_COUNT)];
 		
 		Location origin = tiles.getFirst(); //Should always be the red out tile
@@ -81,7 +81,7 @@ public class LudoMap {
 		
 		//Determines relative location for all safe spaces
 		for (int i = 0; i < safeSpaces.size(); i++) {
-			Vector3D safeSpace = calculateRelativity(origin, safeSpaces.get(i));
+			Vector safeSpace = calculateRelativity(origin, safeSpaces.get(i));
 			
 			for (int j = 0; j < getMapSize(); j++)
 				if (relativeLocations[j].equals(safeSpace))
@@ -120,7 +120,7 @@ public class LudoMap {
 	
 	public boolean isSixPlayers() { return colorCount == 6; }
 	public int getTileCount() { return tileCount; }
-	public Vector3D[] getRelativeLocations() { return relativeLocations; }
+	public Vector[] getRelativeLocations() { return relativeLocations; }
 	public int getColorCount() { return colorCount; }
 	public int getMapSize() { return relativeLocations.length; }
 	
@@ -136,8 +136,8 @@ public class LudoMap {
 		return locations;
 	}
 	
-	private Vector3D calculateRelativity(Location origin, Location target) {
-		return new Vector3D(
+	private Vector calculateRelativity(Location origin, Location target) {
+		return new Vector(
 				(float)(target.getX() - origin.getX()),
 				(float)(target.getY() - origin.getY()),
 				(float)(target.getZ() - origin.getZ()));

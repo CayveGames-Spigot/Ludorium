@@ -6,6 +6,7 @@ import java.util.HashMap;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.joml.Vector2f;
 
 import me.cayve.ludorium.games.boards.BlockTileMap;
 import me.cayve.ludorium.games.boards.GameBoard;
@@ -17,13 +18,13 @@ import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
 import me.cayve.ludorium.games.lobbies.InteractionLobby;
 import me.cayve.ludorium.games.utils.CustomModel;
 import me.cayve.ludorium.games.utils.GameDie;
+import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.Config;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.entities.ItemEntity;
-import me.cayve.ludorium.utils.locational.Vector2D;
 import me.cayve.ludorium.ymls.TextYml;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -94,7 +95,7 @@ public class LudoBoard extends GameBoard {
 						ToolbarMessage.sendImmediate(player, uniqueID + "-roll", 
 							TextYml.getText(player, "in-game.ludo.roll", 
 									Placeholder.parsed("roll", "..."),
-									TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+									Placeholder.component("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
 						.setDuration(rollTimer.getSecondsLeft()).showDuration());
 					
 					dice.playerRoll(lobby.getPlayerAt(gameInstance.getCurrentPlayerIndex()), (result) -> {
@@ -113,7 +114,7 @@ public class LudoBoard extends GameBoard {
 						ToolbarMessage.clearSourceAndSendImmediate(player, uniqueID + "-roll", 
 							TextYml.getText(player, "in-game.ludo.roll", 
 									Placeholder.parsed("roll", gameInstance.getLastRoll() + ""),
-									TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+									Placeholder.component("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
 						.setDuration(selectTimer.getSecondsLeft()).showDuration());
 					
 				}).buildState();
@@ -124,8 +125,8 @@ public class LudoBoard extends GameBoard {
 		ArrayList<ItemEntity> tokens = new ArrayList<>();
 		
 		for (int i = 0; i < boardMap.getColorCount(); i++) {
-			ItemEntity token = new ItemEntity(boardMap.getStarterCenter(origin, i), CustomModel.get(Ludo.class, COLOR_ORDER[i]));
-			token.setInteraction(new Vector2D(1, 1));
+			ItemEntity token = new ItemEntity(boardMap.getStarterCenter(origin, i), CustomModel.get(Ludo.class, COLOR_ORDER[i]),
+					entity -> new Collider(entity.getOriginTransform(), new Vector2f(1, 1)));
 			tokens.add(token);
 		}
 		
@@ -155,7 +156,7 @@ public class LudoBoard extends GameBoard {
 			lobby.forEachOnlinePlayer((player) -> 
 				ToolbarMessage.clearSourceAndSendImmediate(player, uniqueID, 
 					TextYml.getText(player, "in-game.ludo.won", 
-							TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+							Placeholder.component("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
 				.setDuration(endGameTimer.getSecondsLeft()).showDuration());
 			
 			return;
@@ -167,12 +168,12 @@ public class LudoBoard extends GameBoard {
 				if (moveEvent.getAction() == eAction.BLUNDER)
 					lobby.forEachOnlinePlayer((player) -> ToolbarMessage.sendImmediate(player, uniqueID, 
 							TextYml.getText(player, "in-game.ludo.blundered", 
-									TextYml.tag("label", getPositionLabel(moveEvent.getPlayerTurn(), player)))));
+									Placeholder.component("label", getPositionLabel(moveEvent.getPlayerTurn(), player)))));
 				if (moveEvent.getAction() == eAction.CAPTURE)
 					lobby.forEachOnlinePlayer((player) -> ToolbarMessage.sendImmediate(player, uniqueID, 
 							TextYml.getText(player, "in-game.ludo.captured", 
-									TextYml.tag("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player)),
-									TextYml.tag("oponent-label", 
+									Placeholder.component("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player)),
+									Placeholder.component("oponent-label", 
 											getPositionLabel(gameInstance.getPlayerIndexFromPiece(moveEvent.getTokenID()), player)))));
 			}
 		}

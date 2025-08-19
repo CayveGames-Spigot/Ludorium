@@ -68,6 +68,11 @@ public class LudoriumEntity implements Listener {
 		}
 	}
 	
+	public static void uninitialize() {
+		for (Entity entity : entities)
+			remove(entity);
+	}
+	
 	//If an entity is spawned, is tagged by this plugin, but we aren't tracking it, remove it
 	//This implies another plugin spawned the entity
 	@EventHandler

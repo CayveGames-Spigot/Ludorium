@@ -24,10 +24,6 @@ public class LudoriumCommand {
 		registeredGames.add(gameCommand);
 	}
 	
-	public static void uninitialize() {
-		registeredGames = null;
-	}
-	
 	public static LiteralCommandNode<CommandSourceStack> build() {
 		LiteralArgumentBuilder<CommandSourceStack> root = LiteralArgumentBuilder.<CommandSourceStack>literal("ludorium")
 			.then(LiteralArgumentBuilder.<CommandSourceStack>literal("reload")

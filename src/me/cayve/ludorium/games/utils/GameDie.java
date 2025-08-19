@@ -4,14 +4,15 @@ import java.util.ArrayList;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import org.bukkit.entity.Item;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.util.Vector;
+import org.joml.Vector2f;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
+import me.cayve.ludorium.utils.Collider;
+import me.cayve.ludorium.utils.Rigidbody;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 
 /**
@@ -25,15 +26,7 @@ import me.cayve.ludorium.utils.entities.ItemEntity;
  */
 public class GameDie implements Listener {
 
-	private class ActiveRoll {
-		private Item followItem;
-		private ItemEntity display;
-		
-		private ActiveRoll(Item followItem, ItemEntity display) {
-			this.followItem = followItem;
-			this.display = display;
-		}
-	}
+	private static final String MODEL_ID = "dice";
 	private String gameKey;
 	private int diceCount;
 	
@@ -41,7 +34,7 @@ public class GameDie implements Listener {
 	private int currentDiceCount;
 	private Consumer<Integer[]> rollCallback;
 	
-	private ArrayList<ActiveRoll> activeRolls = new ArrayList<>();
+	private ArrayList<ItemEntity> activeRolls = new ArrayList<>();
 	
 	public GameDie(String gameKey, int diceCount) {
 		this.gameKey = gameKey;
@@ -64,7 +57,7 @@ public class GameDie implements Listener {
 		this.rollCallback = callback;
 		this.currentDiceCount = overrideDiceCount;
 		destroyActiveRolls();
-		PlayerStateManager.getGameState(playerID, gameKey).addItem(CustomModel.get("dice").asQuantity(currentDiceCount));
+		PlayerStateManager.getGameState(playerID, gameKey).addItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
 		PlayerStateManager.refreshPlayer(playerID);
 	}
 	
@@ -78,27 +71,27 @@ public class GameDie implements Listener {
 	}
 	
 	private void destroyActiveRolls() {
-		for (ActiveRoll roll : activeRolls) {
-			roll.display.destroy();
-			roll.followItem.remove();
-		}
+		for (ItemEntity roll : activeRolls)
+			roll.destroy();
 	}
 	
 	@EventHandler
 	private void onItemDrop(PlayerDropItemEvent event) {
 		if (currentPlayer == null || 
 				!event.getPlayer().getUniqueId().equals(UUID.fromString(currentPlayer)) ||
-				!CustomModel.is(event.getItemDrop().getItemStack(), "dice")) 
+				!CustomModel.is(event.getItemDrop().getItemStack(), MODEL_ID)) 
 			return;
 		
 		for (int i = 0; i < currentDiceCount; i++) {
-			Item newItem = (Item)event.getItemDrop().copy(event.getItemDrop().getLocation());
-			newItem.setCanPlayerPickup(false);
-			newItem.setCanMobPickup(false);
+			ItemEntity itemDisplay = new ItemEntity(event.getItemDrop().getLocation(), CustomModel.get(MODEL_ID),
+					entity -> new Collider(entity.getOriginTransform(), new Vector2f(1, 1)),
+					entity -> new Rigidbody(entity.getOriginTransform(), entity.getComponent(Collider.class)));
+
+			Rigidbody rb = itemDisplay.getComponent(Rigidbody.class);
+			rb.setVelocity(event.getItemDrop().getVelocity().toVector3f());
+			rb.disableOnRest();
 			
-			ItemEntity itemDisplay = new ItemEntity(event.getItemDrop().getLocation(), CustomModel.get("dice"));
-			itemDisplay.spawn();
-			activeRolls.add(new ActiveRoll(newItem, itemDisplay));
+			activeRolls.add(itemDisplay);
 		}
 		
 		event.getItemDrop().remove();

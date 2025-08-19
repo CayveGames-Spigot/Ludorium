@@ -10,6 +10,7 @@ import org.bukkit.inventory.ItemStack;
 import me.cayve.ludorium.main.LudoriumException;
 import me.cayve.ludorium.utils.ArrayListUtils;
 import me.cayve.ludorium.utils.ArrayUtils;
+import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.patterns.TokenAnimations;
 import me.cayve.ludorium.utils.entities.ItemEntity;
@@ -84,7 +85,7 @@ public class TokenTileMap extends TileMap {
 			if (token == null)
 				token = createToken(state[i], i);
 			else
-				token.move(tileLocations[i]);
+				token.getOriginTransform().setLocation(tileLocations[i]);
 			
 			displayEntities[i] = token;
 		}
@@ -96,8 +97,10 @@ public class TokenTileMap extends TileMap {
 		for (String key : itemMapping.keySet()) {
 			if (tokenID.startsWith(key))
 			{
-				ItemEntity newToken = new ItemEntity(tileLocations[index], itemMapping.get(key));
-				newToken.spawn();
+				ItemEntity newToken = new ItemEntity(tileLocations[index], itemMapping.get(key),
+						entity -> new Animator(entity.getDisplayTransform()),
+						entity -> new Collider(entity.getDisplayTransform()));
+
 				return newToken;
 			}
 		}
@@ -134,7 +137,7 @@ public class TokenTileMap extends TileMap {
 		Arrays.fill(jumpCallbacks, null);
 		jumpCallbacks[movement.path.size() - 1] = this::endMovement;
 		
-		TokenAnimations.jumpTo(token.getAnimator(), 
+		TokenAnimations.jumpTo(token.getComponent(Animator.class), 
 				ArrayUtils.map(movement.path.toArray(new Integer[0]), Location.class, (i) -> tileLocations[i]), jumpCallbacks, 5, 1);
 		
 		if (movement.startCallback != null)

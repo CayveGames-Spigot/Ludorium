@@ -1,189 +1,110 @@
 package me.cayve.ludorium.utils.entities;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Display;
-import org.bukkit.entity.Interaction;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.util.Transformation;
 
-import me.cayve.ludorium.main.LudoriumPlugin;
-import me.cayve.ludorium.utils.animations.Animator;
-import me.cayve.ludorium.utils.functionals.MultiConsumer;
+import me.cayve.ludorium.utils.functionals.Event.Subscriber;
+import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.functionals.Event1;
+import me.cayve.ludorium.utils.interfaces.Destroyable;
+import me.cayve.ludorium.utils.interfaces.Toggleable;
 import me.cayve.ludorium.utils.locational.Transform;
-import me.cayve.ludorium.utils.locational.Vector2D;
-import me.cayve.ludorium.utils.locational.Vector3D;
 
-public class DisplayEntity<T extends Display> implements Listener {
+public class DisplayEntity<T extends Display> implements Destroyable, Toggleable, Listener {
+	
+	public static interface EntityComponent {}
 	
 	protected T display;
-	private String displayID;
+	private String displayID = UUID.randomUUID().toString();
 	
-	protected Transform transform;
+	protected Transform originTransform = new Transform(), displayTransform = new Transform();
 	private Class<T> type;
 
-	private Animator animator;
-	private boolean isSpawned; //For animation consistency
-	private MultiConsumer<DisplayEntity<T>> onDestroyEvent = new MultiConsumer<>();
+	private Map<Class<? extends EntityComponent>, EntityComponent> components = new HashMap<>();
 	
-	private Interaction interaction;
-	private Vector2D interactionBounds;
-	private MultiConsumer<Player> onInteractedWith = new MultiConsumer<>();
+	private Event1<DisplayEntity<T>> onDestroyEvent = new Event1<DisplayEntity<T>>();
+	private Event0 onEnableEvent = new Event0();
+	private Event0 onDisableEvent = new Event0();
 	
-	/**
-	 * Constructor does not spawn the display. Use .spawn() manually
-	 */
-	public DisplayEntity(Class<T> type, Location location) {
-		this.type = type;
-		this.transform = new Transform();
-		this.transform.setLocation(location);
-		this.displayID = UUID.randomUUID().toString();
-		
-		instantiateAnimator();
+	protected DisplayEntity() { }
+	
+	@SafeVarargs
+	public DisplayEntity(Class<T> type, Location location, Function<DisplayEntity<T>, EntityComponent>... componentFactory) { 
+		construct(type, location, componentFactory); 
+	}
+	@SafeVarargs
+	public DisplayEntity(Class<T> type, Location location, String displayID, Function<DisplayEntity<T>, EntityComponent>... componentFactory) { 
+		construct(type, location, displayID, componentFactory); 
 	}
 	
-	/**
-	 * Constructor does not spawn the display. Use .spawn() manually
-	 */
-	public DisplayEntity(Class<T> type, Location location, String displayID) {
-		this.type = type;
-		this.transform = new Transform();
-		this.transform.setLocation(location);
-		this.displayID = displayID;
-		
-		instantiateAnimator();
+	@SafeVarargs
+	protected final void construct(Class<T> type, Location location, Function<DisplayEntity<T>, EntityComponent>... componentFactory) { 
+		construct(type, location, null, componentFactory); 
 	}
-	
-	private void instantiateAnimator() {
-		animator = new Animator();
+
+	@SafeVarargs
+	protected final void construct(Class<T> type, Location location, String displayID, Function<DisplayEntity<T>, EntityComponent>... componentFactory) {
+		if (type == null) return;
 		
-		animator.registerListeners(false, this::onAnimatorUpdate, this::onAnimatorComplete, this::resetToOrigin);
+		this.type = type;
+		
+		this.originTransform.setLocation(location);
+		this.displayTransform.setLocation(location);
+		
+		if (displayID != null)
+			this.displayID = displayID;
+		
+		for (Function<DisplayEntity<T>, EntityComponent> factory : componentFactory)
+		{
+			EntityComponent component = factory.apply(this);
+			
+			if (!this.components.containsKey(component.getClass()))
+				this.components.put(component.getClass(), component);
+		}
+		
+		displayTransform.onUpdated().subscribe(() -> teleportTo(displayTransform));
+		
+		enable();
 	}
 	
 	public String getID() { return displayID; }
 	
 	/**
-	 * Enables an interaction for the entity with the given bounds
-	 * @param interactionBounds The width and height of the interaction
-	 */
-	public void setInteraction(Vector2D interactionBounds) {
-		this.interactionBounds = interactionBounds;
-		
-		displayTransform(transform);
-	}
-	
-	/**
-	 * Moves this entity to the location
-	 * @param location
-	 */
-	public void move(Location location) {
-		animator.cancelAnimations();
-		transform.setLocation(location);
-		
-		displayTransform(transform);
-	}
-	
-	/**
-	 * Moves this entity to the position
-	 * @param position
-	 */
-	public void move(Vector3D position) {
-		transform.setPosition(position);
-		
-		move(transform.getLocation());
-	}
-	
-	/**
-	 * Alters this entity's scale
-	 * @param scale
-	 */
-	public void scale(float scale) {
-		animator.cancelAnimations();
-		transform.scale = scale;
-		
-		displayTransform(transform);
-	}
-	
-	/**
-	 * Alters this entity's rotation
-	 * @param rotation the pitch (x) and yaw (y) of the rotation
-	 */
-	public void rotate(Vector2D rotation) {
-		animator.cancelAnimations();
-		transform.pitch = rotation.x;
-		transform.yaw = rotation.y;
-		
-		displayTransform(transform);
-	}
-	
-	/**
-	 * Alters this entity's entire transform
-	 * @param transform
-	 */
-	public void transform(Transform transform) {
-		scale(transform.scale);
-		rotate(new Vector2D(transform.pitch, transform.yaw));
-		
-		move(transform.getLocation());
-	}
-	
-	/**
-	 * Transforms the display (rather than the entity origin)
-	 * @param transform
-	 */
-	public void displayTransform(Transform transform) {
-		if (display == null) return;
-
-		display.teleport(transform.getLocation());
-		display.setRotation(transform.yaw, transform.pitch);
-		
-		Transformation displayTransformation = display.getTransformation();
-		displayTransformation.getScale().set(transform.scale);
-		display.setTransformation(displayTransformation);
-		
-		//If the entity has a collider, transform it too
-		if (interaction == null) return;
-		interaction.teleport(transform.getLocation());
-		interaction.setRotation(transform.yaw, transform.pitch);
-		
-		interaction.setInteractionWidth(interactionBounds.x * transform.scale);
-		interaction.setInteractionHeight(interactionBounds.y * transform.scale);
-	}
-	
-	/**
-	 * Resets the display back to the entity origin
-	 */
-	public void resetToOrigin() { displayTransform(transform); }
-	
-	/**
-	 * Spawns this entity's display 
+	 * Returns the mutable location of the origin point
 	 * @return
 	 */
-	public final T spawn() { return spawn(false); }
+	public Transform getOriginTransform() { return originTransform; }
 	
-	protected T spawn(boolean rawSpawn) {
+	/**
+	 * Returns the mutable location of the current display point
+	 * @return
+	 */
+	public Transform getDisplayTransform() { return displayTransform; }
+	
+	public void teleportToOrigin() { teleportTo(originTransform); }
+	
+	/**
+	 * Resets the origin point to the current display location
+	 */
+	public void saveOrigin() { originTransform.set(displayTransform); }
+
+	private void teleportTo(Transform transform) {
+		if (!isEnabled()) return;
+
+		display.teleport(transform.getLocation());
+		display.setRotation(transform.getYaw(), transform.getPitch());
 		
-		//If just the spawning logic should be run alone, then skip the rest
-		if (!rawSpawn) {
-			remove();
-			isSpawned = true;
-		}
-			
-		display = LudoriumEntity.spawn(transform.getLocation(), type);
-		
-		if (interactionBounds != null)
-		{
-			interaction = LudoriumEntity.spawn(transform.getLocation(), Interaction.class);
-			LudoriumPlugin.registerEvent(this);
-		}
-		
-		return display;
+		Transformation displayTransformation = display.getTransformation();
+		displayTransformation.getScale().set(transform.getScale());
+		display.setTransformation(displayTransformation);
 	}
 	
 	/**
@@ -191,79 +112,65 @@ public class DisplayEntity<T extends Display> implements Listener {
 	 */
 	public T get() { return display; }
 	
+	public <C extends EntityComponent> C getComponent(Class<C> type) {
+		if (!components.containsKey(type))
+			return null;
+		return type.cast(components.get(type));
+	}
+
+	private <C> void forEachComponentWith(Class<C> type, Consumer<C> action) {
+		for (EntityComponent component : components.values()) {
+			if (!type.isInstance(component)) continue;
+			
+			action.accept(type.cast(component));
+		}
+	}
+	
+	/**
+	 * Spawns this entity's display
+	 */
+	@Override
+	public void enable() {
+		disable();
+			
+		display = LudoriumEntity.spawn(originTransform.getLocation(), type);
+		
+		forEachComponentWith(Toggleable.class, x -> x.enable());
+		
+		onEnableEvent.run();
+	}
+	
 	/**
 	 * Removes this entity's display
 	 */
-	public void remove() {
-		isSpawned = false;
+	@Override
+	public void disable() {
+		if (!isEnabled())
+			return;
 		
-		animator.cancelAnimations();
-		if (display != null)
-		{
-			LudoriumEntity.remove(display);
-			display = null;
-		}
+		LudoriumEntity.remove(display);
+		display = null;
 		
-		if (interaction != null)
-		{
-			LudoriumEntity.remove(interaction);
-			interaction = null;
-			
-			HandlerList.unregisterAll(this);
-		}
-	}
-	
-	@EventHandler
-	/**
-	 * The interaction event trigger
-	 * @param event
-	 */
-	public void onInteractedWith(PlayerInteractEntityEvent event) {
-		if (!(event.getRightClicked() instanceof Interaction) ||
-			!interaction.equals(event.getRightClicked())) 
-				return;
+		forEachComponentWith(Toggleable.class, x -> x.disable());
 		
-		onInteractedWith.accept(event.getPlayer());
+		onDisableEvent.run();
 	}
-	
-	/**
-	 * Registers a listener for when the interaction entity is interacted with
-	 * @param listener
-	 */
-	public void registerOnInteractedWith(Consumer<Player> listener) { onInteractedWith.add(listener); }
-	
-	/**
-	 * Registers a listener for when the entity is destroyed
-	 * @param listener
-	 */
-	public void registerOnDestroy(Consumer<DisplayEntity<T>> listener) { onDestroyEvent.add(listener); }
-	
-	/**
-	 * Animations will temporarily enable the entity during playback
-	 * @return The entity's animator
-	 */
-	public Animator getAnimator() { return animator; }
-	
-	private void onAnimatorUpdate(Transform offset) {
-		if (display == null) //If the display isn't active, temporarily activate it without tagging isSpawned
-			spawn(true);
-		
-		Transform locationOffset = Transform.relativeTransform(this.transform, offset);
-		displayTransform(locationOffset);
-	}
-	
-	private void onAnimatorComplete() {
-		if (!isSpawned) //If the display isn't supposed to be activated, remove it after animator completes
-			remove();
-	}
-	
+
 	/**
 	 * Destroys and cleans up this entity
 	 */
+	@Override
 	public void destroy() {
-		remove();
-		animator.cancelAnimations();
+		disable();
+		
+		forEachComponentWith(Destroyable.class, x -> x.destroy());
 		
 		onDestroyEvent.accept(this);
 	}
+	
+	@Override public boolean isEnabled() { return display != null; }
+	
+	@Override public Subscriber<Runnable> onDisabled() { return onDisableEvent.getSubscriber(); }
+	@Override public Subscriber<Runnable> onEnabled() { return onEnableEvent.getSubscriber(); }
+	@Override public Subscriber<Consumer<DisplayEntity<T>>> onDestroyed() { return onDestroyEvent.getSubscriber(); }
 }

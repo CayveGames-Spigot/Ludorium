@@ -13,7 +13,6 @@ import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.locational.Region;
 import me.cayve.ludorium.ymls.TextYml;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class LudoCreationWizard extends GameCreationWizard {
@@ -68,15 +67,15 @@ public class LudoCreationWizard extends GameCreationWizard {
 		Component colors = Component.empty();
 		
 		//Replaces color with the ordered RED->YELLOW->GREEN->BLUE and adds the last two if six players
-		for (int i = (isSixPlayer ? 6 : 4) - 1; i >= 0; i++)
+		for (int i = (isSixPlayer ? 6 : 4) - 1; i >= 0; i--)
 		{
-			colors.append(Component.text("■").color(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[i]).color()));
+			colors = colors.append(Component.text("■").color(TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[i]).color()));
 			
 			if (i != 0)
-				colors.append(Component.text("->"));
+				colors = colors.append(Component.text("->"));
 		}
 
-		ToolbarMessage.sendQueue(player, tsk, TextYml.getText(player, "wizards.ludo.colorVerification", TextYml.tag("colors", colors)))
+		ToolbarMessage.sendQueue(player, tsk, TextYml.getText(player, "wizards.ludo.colorVerification", Placeholder.component("colors", colors)))
 			.setDuration(12).showDuration().clearIfSkipped();
 	}
 	
@@ -89,8 +88,7 @@ public class LudoCreationWizard extends GameCreationWizard {
 				.registerProgress(this::promptColorOrderVerification)
 				.registerAction(() -> { //Started manual mode
 					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectTiles",
-							Placeholder.parsed("color", 
-									((TextComponent)TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[0])).content().toUpperCase())))
+							Placeholder.component("color", TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[0], raw -> raw.toUpperCase()))))
 					.setPermanent();
 					
 					setNewAction(new SelectBlocksAction(player, -1, false, this::onCompletedAction, this::onCanceledAction));
@@ -108,9 +106,8 @@ public class LudoCreationWizard extends GameCreationWizard {
 				})
 				.registerAction(() -> {
 					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectHome",
-							Placeholder.parsed("color", 
-									((TextComponent)TextYml.getText(player, "words.colors." 
-												+ LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("homeColor")])).content().toUpperCase())))
+							Placeholder.component("color", TextYml.getText(player, "words.colors." 
+									+ LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("homeColor")], (raw) -> raw.toUpperCase()))))
 							.setPermanent();
 					 
 					setNewAction(new SelectBlocksAction(player, 4, false, this::onCompletedAction, this::onCanceledAction));
@@ -139,9 +136,9 @@ public class LudoCreationWizard extends GameCreationWizard {
 				})
 				.registerAction(() -> {
 					setNewAction(new SelectRegionAction(player, 
-							TextYml.getText(player, "wizards.ludo.selectStarter",
-								Placeholder.parsed("color", ((TextComponent)TextYml.getText(player, "words.colors." 
-										+ LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("starterColor")])).content().toUpperCase())),
+							TextYml.getText(player, "wizards.ludo.selectStarter", 
+									Placeholder.component("color", TextYml.getText(player, "words.colors." + 
+									LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("starterColor")], (raw) -> raw.toUpperCase()))),
 							this::onCompletedAction, this:: onCanceledAction));
 				})
 				.registerComplete(() -> {

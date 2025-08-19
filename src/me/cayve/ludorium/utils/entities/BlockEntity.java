@@ -1,30 +1,46 @@
 package me.cayve.ludorium.utils.entities;
 
+import java.util.function.Function;
+
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display.Brightness;
 
 import me.cayve.ludorium.utils.locational.LocationUtil;
-import me.cayve.ludorium.utils.locational.Vector3D;
 
 public class BlockEntity extends DisplayEntity<BlockDisplay> {
 
 	private BlockData blockData;
 	private int lightLevel;
 	
-	public BlockEntity(Location location, BlockData blockData) {
-		super(BlockDisplay.class, location);
-		
+	@SafeVarargs
+	public BlockEntity(Location location, BlockData blockData, 
+			Function<DisplayEntity<BlockDisplay>, EntityComponent>... componentFactory) { 
+		construct(BlockDisplay.class, location, null, componentFactory); 
+	}
+	@SafeVarargs
+	public BlockEntity(Location location, BlockData blockData, String displayID, 
+			Function<DisplayEntity<BlockDisplay>, EntityComponent>... componentFactory) { 
+		construct(location, blockData, displayID, componentFactory); 
+	}
+	
+	@SafeVarargs
+	protected final void construct(Location location, BlockData blockData, String displayID, 
+			Function<DisplayEntity<BlockDisplay>, EntityComponent>... componentFactory) {
 		setLightLevel();
 		setBlockData(blockData);
+		
+		construct(BlockDisplay.class, location, displayID, componentFactory);
+		
+		originTransform.onUpdated().subscribe(this::setLightLevel);
 	}
 	
 	/**
 	 * Sets the default light level to that of the block above
 	 */
 	private void setLightLevel() {
-		Location blockAbove = LocationUtil.relativeLocation(transform.getLocation(), 0, 1, 0);
+		Location blockAbove = LocationUtil.relativeLocation(originTransform.getLocation(), 0, 1, 0);
 		setLightLevel(Math.max(blockAbove.getBlock().getLightFromBlocks(), blockAbove.getBlock().getLightFromSky()));
 	}
 	
@@ -43,26 +59,10 @@ public class BlockEntity extends DisplayEntity<BlockDisplay> {
 	}
 	
 	@Override
-	public void move(Location location) {
-		super.move(location);
-		
-		setLightLevel();
-	}
-	
-	@Override
-	public void move(Vector3D position) {
-		super.move(position);
-		
-		setLightLevel();
-	}
-	
-	@Override
-	public BlockDisplay spawn(boolean rawSpawn) {
-		super.spawn(rawSpawn);
+	public void enable() {
+		super.enable();
 		
 		setBlockData(blockData);
 		setLightLevel(lightLevel);
-		
-		return display;
 	}
 }
