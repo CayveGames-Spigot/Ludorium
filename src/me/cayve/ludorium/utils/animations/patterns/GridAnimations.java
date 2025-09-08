@@ -46,7 +46,7 @@ public class GridAnimations {
 
 						if (animators.get(x, y) == null) continue;
 						
-						animators.get(x, y).setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
+						animators.get(x, y).getDefaultRig().setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
 								.setDuration(evenAnimDur + ((duration - evenAnimDur) * overlap)));
 					}
 				}));
@@ -86,7 +86,7 @@ public class GridAnimations {
 						//.get handles out of bounds
 						if (animators.get(x, y) == null) continue;
 
-						animators.get(x, y).setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
+						animators.get(x, y).getDefaultRig().setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
 								.setDuration(evenAnimDur + ((duration - evenAnimDur) * overlap)));
 					}
 				}));

@@ -105,9 +105,9 @@ public class LudoMap {
 	}
 	
 	public Location getStarterCenter(Location origin, int color) {
-		return LocationUtil.relativeLocation(new Region(
+		return new Region(
 				getWorldLocation(origin, getStarterIndex(color, 0)), 
-				getWorldLocation(origin, getStarterIndex(color, 3)), false).getCenter(), 0, 0.5f, 0); //Add 0.5f because getCenter will get the center of y too
+				getWorldLocation(origin, getStarterIndex(color, 3)), false).getCenter();
 	}
 	
 	public Location getWorldLocation(Location origin, int index) {

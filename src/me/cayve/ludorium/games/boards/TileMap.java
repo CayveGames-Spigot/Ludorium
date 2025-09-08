@@ -29,6 +29,31 @@ public abstract class TileMap implements Listener {
 	public abstract Animator[] getAnimators();
 	public abstract String getTileIDAt(int index);
 	
+	/**
+	 * Applies this tile map's select effect to the tile index
+	 * @param index The tile to select
+	 * @param overwriteSelected Whether to unselect any already selected tiles as well
+	 */
+	public void selectTile(int index, boolean overwriteSelected) {}
+	
+	/**
+	 * Unselects a tile index. -1 to unselect all
+	 * @param index
+	 */
+	public void unselectTile(int index) {}
+	
+	/**
+	 * Applies this tile map's highlight effect to the tile index
+	 * @param index The tile to select
+	 * @param overwriteSelected Whether to unhighlight any already highlighted tiles as well
+	 */
+	public void highlightTile(int index, boolean overwriteHighlighted) {}
+	/**
+	 * Unhighlights a tile index. -1 to unhighlight all
+	 * @param index
+	 */
+	public void unhighlightTile(int index) {}
+	
 	protected void publishTileInteraction(Player player, Integer tile) {
 		if (!whitelistedPlayers.verify(player) || !whitelistedTiles.verify(tile))
 			return;

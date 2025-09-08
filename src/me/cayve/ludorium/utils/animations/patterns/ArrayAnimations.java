@@ -57,7 +57,7 @@ public class ArrayAnimations {
 						(i * (direction == -1 || direction == 0 && k == 1 ? -1 : 1))); //Flip the index direction if going reverse
 				
 				Timer.register(new Task(sourceKey).setDuration(i * evenAnimDur * (1 - overlap)).registerOnComplete(() -> {
-					animators[index].setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
+					animators[index].getDefaultRig().setYAnimation(new SinWaveAnimation(amplitude, timeDelay)
 							.setDuration(evenAnimDur + ((duration - evenAnimDur) * overlap)));
 				}));
 			}

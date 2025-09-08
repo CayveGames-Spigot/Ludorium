@@ -1,18 +1,19 @@
 package me.cayve.ludorium.games.boards;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
 import org.bukkit.Location;
 import org.bukkit.inventory.ItemStack;
+import org.joml.Vector2f;
 
 import me.cayve.ludorium.main.LudoriumException;
 import me.cayve.ludorium.utils.ArrayListUtils;
 import me.cayve.ludorium.utils.ArrayUtils;
 import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.animations.Animator;
-import me.cayve.ludorium.utils.animations.patterns.TokenAnimations;
+import me.cayve.ludorium.utils.animations.rigs.HoverAnimationRig;
+import me.cayve.ludorium.utils.animations.rigs.PathingAnimationRig;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 
 public class TokenTileMap extends TileMap {
@@ -24,10 +25,12 @@ public class TokenTileMap extends TileMap {
 		private Runnable startCallback, endCallback;
 	}
 	
+	public record TokenInfo (ItemStack tokenItem, Vector2f tokenBounds) {}
+	
 	private Location[] tileLocations;
 	private ItemEntity[] displayEntities;
 	
-	private HashMap<String, ItemStack> itemMapping;
+	private HashMap<String, TokenInfo> tokenMapping;
 	
 	private Runnable onMapSet; //Called when the map is set (usually after token moving, to indicate animations are complete)
 	
@@ -38,12 +41,12 @@ public class TokenTileMap extends TileMap {
 	 * Creates a new tile map
 	 * @param tileLocations The world locations of each tile spot
 	 * @param itemMapping The mapping of item type to token IDs. Uses .startsWith() allowing for just the beginning of the ID, if needed
-	 * @param onMapSet
+	 * @param onMapSet Called when the map is set (usually after token moving, to indicate animations are complete)
 	 */
-	public TokenTileMap(Location[] tileLocations, HashMap<String, ItemStack> itemMapping, Runnable onMapSet) {
+	public TokenTileMap(Location[] tileLocations, HashMap<String, TokenInfo> tokenMapping, Runnable onMapSet) {
 		super();
 		
-		this.itemMapping = itemMapping;
+		this.tokenMapping = tokenMapping;
 		this.tileLocations = tileLocations;
 		this.displayEntities = new ItemEntity[tileLocations.length];
 		this.onMapSet = onMapSet;
@@ -59,6 +62,7 @@ public class TokenTileMap extends TileMap {
 			pendingStateUpdate = state;
 			return;
 		}
+
 		pendingStateUpdate = null;
 		
 		ArrayListUtils<ItemEntity> activeDisplays = new ArrayListUtils<>();
@@ -94,18 +98,19 @@ public class TokenTileMap extends TileMap {
 	}
 	
 	private ItemEntity createToken(String tokenID, int index) {
-		for (String key : itemMapping.keySet()) {
-			if (tokenID.startsWith(key))
-			{
-				ItemEntity newToken = new ItemEntity(tileLocations[index], itemMapping.get(key),
-						entity -> new Animator(entity.getDisplayTransform()),
-						entity -> new Collider(entity.getDisplayTransform()));
 
+		for (String mapKey : tokenMapping.keySet()) {
+			if (tokenID.startsWith(mapKey)) {
+				ItemEntity newToken = new ItemEntity(tileLocations[index], tokenMapping.get(mapKey).tokenItem, tokenID,
+						entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform()),
+						entity -> new Collider(entity.getDisplayTransform(), tokenMapping.get(mapKey).tokenBounds));
+
+				newToken.getComponent(Collider.class).onInteracted().subscribe((player) -> publishTileInteraction(player, index));
 				return newToken;
 			}
 		}
 		
-		throw new LudoriumException("Item map does not contain mapping for ID: " + tokenID);
+		throw new LudoriumException("Token map does not contain mapping for ID: " + tokenID);
 	}
 	
 	/**
@@ -125,21 +130,26 @@ public class TokenTileMap extends TileMap {
 		newMovement.endCallback = endCallback;
 		
 		if (queueMovement)
+		{
 			tokenQueue.add(newMovement);
+			
+			if (tokenQueue.size() == 1)
+				startMovement(newMovement);
+		}
 		else
 			startMovement(newMovement);
 	}
 	
 	private void startMovement(TokenMovement movement) {
 		ItemEntity token = ArrayUtils.find(displayEntities, x -> x.getID().equals(movement.tokenID));
-		
+
 		Runnable[] jumpCallbacks = new Runnable[movement.path.size()];
-		Arrays.fill(jumpCallbacks, null);
+
 		jumpCallbacks[movement.path.size() - 1] = this::endMovement;
 		
-		TokenAnimations.jumpTo(token.getComponent(Animator.class), 
-				ArrayUtils.map(movement.path.toArray(new Integer[0]), Location.class, (i) -> tileLocations[i]), jumpCallbacks, 5, 1);
-		
+		token.getComponent(Animator.class).play(new PathingAnimationRig(
+				ArrayUtils.map(movement.path.toArray(new Integer[0]), Location.class, (i) -> tileLocations[i]), jumpCallbacks, .5f, 1));
+
 		if (movement.startCallback != null)
 			movement.startCallback.run();
 	}
@@ -147,7 +157,7 @@ public class TokenTileMap extends TileMap {
 	private void endMovement() {
 		if (tokenQueue.getLast().endCallback != null)
 			tokenQueue.getLast().endCallback.run();
-		
+
 		tokenQueue.removeFirst();
 		
 		if (!tokenQueue.isEmpty())
@@ -172,8 +182,30 @@ public class TokenTileMap extends TileMap {
 
 	@Override
 	public String getTileIDAt(int index) {
-		// TODO Auto-generated method stub
-		return null;
+		if (displayEntities[index] == null)
+			return null;
+		
+		return displayEntities[index].getID();
+	}
+	
+	@Override
+	public void selectTile(int index, boolean overwriteSelected) {
+		if (overwriteSelected)
+			unselectTile(-1);
+		
+		if (index == -1 || displayEntities[index] == null)
+			return;
+		
+		displayEntities[index].getComponent(Animator.class).play(new HoverAnimationRig(.4f, .1f, .1f, .1f));
+	}
+	
+	@Override
+	public void unselectTile(int index) {
+		if (index == -1)
+			for (int i = 0; i < displayEntities.length; i++)
+				unselectTile(i);
+		else if (displayEntities[index] != null)
+			displayEntities[index].getComponent(Animator.class).cancelRigType(HoverAnimationRig.class);
 	}
 
 }

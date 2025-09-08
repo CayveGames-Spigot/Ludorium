@@ -83,7 +83,7 @@ public class LudoInstance extends GameInstance {
 			return;
 		
 		int targetIndex = getPieceTarget(selectedPiece, false);
-		
+
 		//Check that the selected piece moves to the selected tile
 		if (targetIndex != tileIndex)
 			return;
@@ -113,12 +113,16 @@ public class LudoInstance extends GameInstance {
 		if (currentRoll == -1 || !doesPieceMatchCurrentPlayer(pieceID))
 			return;
 		
-		//Check the contents of the targeted tile
-		int targetIndex = getPieceTarget(pieceID, false);
-		
-		//Verify the move is possible and that if its a capture, its not their own piece
-		if (targetIndex == -1 || (!board[targetIndex].isEmpty() && doesPieceMatchCurrentPlayer(pieceID)))
-			return;
+		if (selectedPiece != null && selectedPiece.equals(pieceID))
+			pieceID = null;
+		else {
+			//Check the contents of the targeted tile
+			int targetIndex = getPieceTarget(pieceID, false);
+	
+			//Verify the move is possible and that if its a capture, its not their own piece
+			if (targetIndex == -1 || (!board[targetIndex].isEmpty() && doesPieceMatchCurrentPlayer(pieceID)))
+				return;
+		}
 		
 		selectedPiece = pieceID;
 	}
@@ -144,6 +148,7 @@ public class LudoInstance extends GameInstance {
 	public int getCurrentPlayerIndex() { return activePlayerIndexes.get(currentTurn); }
 	public boolean canPieceMove(String pieceID) { return getPieceTarget(pieceID, false) != -1; }
 	public String getSelectedPiece() { return selectedPiece; }
+	public int getSelectedTarget() { return getPieceTarget(selectedPiece, false); }
 	
 	/**
 	 * Gets the player index of the winner. -1 if no winner yet
@@ -152,10 +157,10 @@ public class LudoInstance extends GameInstance {
 	public int getWinnerPlayerIndex() { return winnerPlayerIndex; }
 	
 	private boolean doesPieceMatchCurrentPlayer(String pieceID) { return getPlayerIndexFromPiece(pieceID) == getCurrentPlayerIndex(); }
-	public int getPlayerIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(0)); }
-	public int getPieceNumberFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2)); }
+	public int getPlayerIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(0) + ""); }
+	public int getPieceNumberFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2) + ""); }
 	
-	private int getPieceIndex(String pieceID) {
+	public int getPieceIndex(String pieceID) {
 		for (int i = 0; i < board.length; i++)
 			if (board[i].equals(pieceID))
 				return i;

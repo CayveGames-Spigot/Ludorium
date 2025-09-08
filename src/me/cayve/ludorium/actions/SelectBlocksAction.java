@@ -117,14 +117,14 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		if (!animateSelection && !animateCompletion) return;
 		
 		BlockEntity newAnimation = new BlockEntity(block.getLocation(), block.getBlockData(),
-				entity -> new Animator(entity.getDisplayTransform()));
+				entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform()));
 		
 		activeAnimations.add(newAnimation);
 		
 		if (animateSelection && !(blockCount == 1 && animateCompletion))
 		{
 			newAnimation.getComponent(Animator.class).onCompleted().subscribe(newAnimation::disable);
-			newAnimation.getComponent(Animator.class).setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
+			newAnimation.getComponent(Animator.class).getDefaultRig().setYAnimation(new SinWaveAnimation(0.3f, 0.1f).subanim(0, 0.5f).setSpeed(1.5f));
 		}
 	}
 	
@@ -142,6 +142,8 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		float duration = 2 + (4 * weight);
 		float overlap = 0.3f + (0.45f * (1 - weight));
 
+		activeAnimations.forEach(x -> x.enable());
+		
 		ArrayAnimations.wave(tsk, 
 				ArrayUtils.map(ArrayUtils.toArray(activeAnimations, DisplayEntity.class), Animator.class, 
 				(entity) -> entity.getComponent(Animator.class)), 

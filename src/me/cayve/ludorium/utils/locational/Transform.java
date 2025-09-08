@@ -13,6 +13,8 @@ public class Transform {
 	
 	private Event0 onUpdateEvent = new Event0();
 	
+	private Vector3f offset = new Vector3f(0,0,0);
+	
 	private World world;
 	private float x, y, z;
 	private float scale = 1;
@@ -21,17 +23,26 @@ public class Transform {
 	public Location getLocation() { 
 		if (world == null)
 			throw new LudoriumException("World not defined.");
-		return new Location(world, x, y, z); 
+		return new Location(getWorld(), getX(), getY(), getZ()); 
 	}
 	
 	public World getWorld() { return world; }
-	public float getX() { return x; }
-	public float getY() { return y; }
-	public float getZ() { return z; }
+	public float getX() { return x + offset.x; }
+	public float getY() { return y + offset.y; }
+	public float getZ() { return z + offset.z; }
 	public float getScale() { return scale; }
 	public float getPitch() { return pitch; }
 	public float getYaw() { return yaw; }
 	
+	/**
+	 * Sets the transform's locational offset. The offset will simply alter location output
+	 * @param offset
+	 */
+	public void setOffset(Vector3f offset) { 
+		this.offset = offset; 
+		
+		onUpdateEvent.run();
+	}
 	public void setLocation(Location location) {
 		world = location.getWorld();
 		x = (float) location.getX();
@@ -105,7 +116,9 @@ public class Transform {
 	}
 	
 	public void add(Transform toOffset) {
-		world = toOffset.world;
+		if (world == null)
+			world = toOffset.world;
+		
 		x = x + toOffset.x;
 		y = y + toOffset.y;
 		z = z + toOffset.z;

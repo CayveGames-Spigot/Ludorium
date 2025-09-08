@@ -1,14 +1,20 @@
 package me.cayve.ludorium.games.utils;
 
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.joml.Vector2f;
+import org.joml.Vector3f;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.utils.Collider;
@@ -27,6 +33,7 @@ import me.cayve.ludorium.utils.entities.ItemEntity;
 public class GameDie implements Listener {
 
 	private static final String MODEL_ID = "dice";
+	private static final float RAN_VEL_RANGE = .25f;
 	private String gameKey;
 	private int diceCount;
 	
@@ -53,16 +60,31 @@ public class GameDie implements Listener {
 	}
 	
 	public void playerRoll(String playerID, int overrideDiceCount, Consumer<Integer[]> callback) {
+		removeItemFromPlayer();
+		destroyActiveRolls();
+		
 		this.currentPlayer = playerID;
 		this.rollCallback = callback;
 		this.currentDiceCount = overrideDiceCount;
-		destroyActiveRolls();
+
 		PlayerStateManager.getGameState(playerID, gameKey).addItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
 		PlayerStateManager.refreshPlayer(playerID);
 	}
 	
 	public void forceRoll() {
 		if (currentPlayer == null) return;
+		
+		if (activeRolls.isEmpty()) {
+			
+			OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(currentPlayer));
+			
+			if (!player.isOnline())
+				attemptRollCalculation(false);
+			else //Calls the drop event directly in order to recreate natural player drop velocity
+				dropDice(((Player)player).dropItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount)));
+				
+		} else
+			attemptRollCalculation(false);
 	}
 	
 	public void destroy() {
@@ -73,6 +95,37 @@ public class GameDie implements Listener {
 	private void destroyActiveRolls() {
 		for (ItemEntity roll : activeRolls)
 			roll.destroy();
+		
+		activeRolls.clear();
+	}
+	
+	private void removeItemFromPlayer() {
+		if (currentPlayer == null) return;
+		
+		PlayerStateManager.getGameState(currentPlayer, gameKey).removeItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
+		PlayerStateManager.refreshPlayer(currentPlayer);
+	}
+	
+	private void attemptRollCalculation(boolean waitForRest) {
+		//If a dice isn't done rolling, return
+		for (ItemEntity dice : activeRolls) {
+			if (waitForRest && dice.getComponent(Rigidbody.class).isEnabled())
+				return;
+		}
+		
+		//Calculate the roll values
+		Integer[] results = new Integer[currentDiceCount];
+		
+		for (int i = 0; i < currentDiceCount; i++)
+			results[i] = 6;//new Random().nextInt(6) + 1;
+		
+		//Reset the current roll and submit the results
+		removeItemFromPlayer();
+		destroyActiveRolls();
+		rollCallback.accept(results);
+		
+		currentPlayer = null;
+		rollCallback = null;
 	}
 	
 	@EventHandler
@@ -82,18 +135,34 @@ public class GameDie implements Listener {
 				!CustomModel.is(event.getItemDrop().getItemStack(), MODEL_ID)) 
 			return;
 		
+		dropDice(event.getItemDrop());
+	}
+	
+	private void dropDice(Item item) {
+		removeItemFromPlayer();
+		
 		for (int i = 0; i < currentDiceCount; i++) {
-			ItemEntity itemDisplay = new ItemEntity(event.getItemDrop().getLocation(), CustomModel.get(MODEL_ID),
-					entity -> new Collider(entity.getOriginTransform(), new Vector2f(1, 1)),
-					entity -> new Rigidbody(entity.getOriginTransform(), entity.getComponent(Collider.class)));
+			ItemEntity itemDisplay = new ItemEntity(item.getLocation(), CustomModel.get(MODEL_ID),
+					entity -> new Collider(entity.getDisplayTransform(), new Vector2f(.4f, .4f)),
+					entity -> new Rigidbody(entity.getDisplayTransform(), entity.getComponent(Collider.class)));
 
+			itemDisplay.setPivot(new Vector3f(0,0,0));
 			Rigidbody rb = itemDisplay.getComponent(Rigidbody.class);
-			rb.setVelocity(event.getItemDrop().getVelocity().toVector3f());
+			
+			Vector3f velocity = item.getVelocity().toVector3f();
+			if (i != 0)
+				velocity.add(
+						new Random().nextFloat(-RAN_VEL_RANGE, RAN_VEL_RANGE), 
+						new Random().nextFloat(-RAN_VEL_RANGE, RAN_VEL_RANGE), 
+						new Random().nextFloat(-RAN_VEL_RANGE, RAN_VEL_RANGE));
+			
+			rb.setVelocity(velocity);
 			rb.disableOnRest();
+			rb.onRested().subscribe(() -> attemptRollCalculation(true));
 			
 			activeRolls.add(itemDisplay);
 		}
 		
-		event.getItemDrop().remove();
+		item.remove();
 	}
 }

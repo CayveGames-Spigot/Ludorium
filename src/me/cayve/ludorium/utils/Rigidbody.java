@@ -22,8 +22,8 @@ public class Rigidbody implements EntityComponent, Destroyable, Toggleable {
 	private Event0 onRestEvent = new Event0(); //Called when Rigidbody comes to rest
 	
 	private Vector3f velocity = new Vector3f(0, 0, 0);
-	private Vector3f gravity = new Vector3f(0, -.03f, 0);
-	private float airDrag = 0, surfaceDrag = 0;
+	private Vector3f gravity = new Vector3f(0, -.05f, 0);
+	private float airDrag = .03f, surfaceDrag = .05f;
 	private boolean grounded, atRest;
 	
 	private Task simulationTimer;
@@ -37,24 +37,42 @@ public class Rigidbody implements EntityComponent, Destroyable, Toggleable {
 	}
 	
 	private void calculate() {
-		velocity = velocity.mul(grounded ? surfaceDrag : airDrag).add(gravity);
+		float drag = (1 - (grounded ? surfaceDrag : airDrag));
 		
-		referenceTransform.setLocation(referenceTransform.getLocation().add(Vector.fromJOML(velocity)));
+		velocity.x *= drag;
+		velocity.z *= drag;
 		
-		if (referenceCollider.isEnabled() && referenceTransform.getWorld().hasCollisionsIn(referenceCollider.getBoundingBox())) {
+		velocity.add(new Vector3f(gravity).mul(grounded ? 0 : 1));
+		
+		if (willCollide(new Vector3f(velocity.x, 0, 0)))
+			velocity.x *= -.4f;
+		if (willCollide(new Vector3f(0, 0, velocity.z)))
+			velocity.z *= -.4f;
+		
+		if (!grounded && willCollide(new Vector3f(0, velocity.y, 0))) {
 			grounded = true;
-			velocity.y *= -1;
+			velocity.y *= -.4f;
 		} else
 			grounded = false;
 		
-		if (velocity.equals(0, 0, 0))
+		referenceTransform.setLocation(referenceTransform.getLocation().add(Vector.fromJOML(velocity)));
+		
+		if (velocity.length() <= 0.1f && grounded)
 		{
 			if (!atRest) {
 				atRest = true;
+				velocity = new Vector3f(0,0,0);
 				onRestEvent.run();
 			}
 		} else
 			atRest = false;
+	}
+	
+	private boolean willCollide(Vector3f velocityToCheck) {
+		if (!referenceCollider.isEnabled())
+			return false;
+		
+		return referenceTransform.getWorld().hasCollisionsIn(referenceCollider.getBoundingBox().shift(Vector.fromJOML(velocityToCheck)));
 	}
 	
 	@Override
@@ -81,7 +99,7 @@ public class Rigidbody implements EntityComponent, Destroyable, Toggleable {
 	public void setAirDrag(float drag) { this.airDrag = drag; }
 	public void setSurfaceDrag(float drag) { this.surfaceDrag = drag; }
 
-	public void disableOnRest() { onRestEvent.subscribe(this::disable); }
+	public void disableOnRest() { onRestEvent.subscribe(this::disable, 1); }
 	
 	@Override public boolean isEnabled() { return !simulationTimer.isPaused(); }
 
@@ -89,4 +107,5 @@ public class Rigidbody implements EntityComponent, Destroyable, Toggleable {
 	@Override public Subscriber<Runnable> onDisabled() { return onDisableEvent.getSubscriber(); }
 	@Override public Subscriber<Runnable> onDestroyed() { return onDestroyEvent.getSubscriber(); }
 	
+	public Subscriber<Runnable> onRested() { return onRestEvent.getSubscriber(); }
 }

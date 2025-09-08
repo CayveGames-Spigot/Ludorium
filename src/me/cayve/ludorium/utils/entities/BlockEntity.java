@@ -12,12 +12,12 @@ import me.cayve.ludorium.utils.locational.LocationUtil;
 public class BlockEntity extends DisplayEntity<BlockDisplay> {
 
 	private BlockData blockData;
-	private int lightLevel;
+	private int lightLevel = -1;
 	
 	@SafeVarargs
 	public BlockEntity(Location location, BlockData blockData, 
 			Function<DisplayEntity<BlockDisplay>, EntityComponent>... componentFactory) { 
-		construct(BlockDisplay.class, location, null, componentFactory); 
+		construct(location, blockData, null, componentFactory); 
 	}
 	@SafeVarargs
 	public BlockEntity(Location location, BlockData blockData, String displayID, 
@@ -28,8 +28,7 @@ public class BlockEntity extends DisplayEntity<BlockDisplay> {
 	@SafeVarargs
 	protected final void construct(Location location, BlockData blockData, String displayID, 
 			Function<DisplayEntity<BlockDisplay>, EntityComponent>... componentFactory) {
-		setLightLevel();
-		setBlockData(blockData);
+		this.blockData = blockData;
 		
 		construct(BlockDisplay.class, location, displayID, componentFactory);
 		
@@ -63,6 +62,10 @@ public class BlockEntity extends DisplayEntity<BlockDisplay> {
 		super.enable();
 		
 		setBlockData(blockData);
-		setLightLevel(lightLevel);
+		
+		if (lightLevel == -1)
+			setLightLevel();
+		else
+			setLightLevel(lightLevel);
 	}
 }

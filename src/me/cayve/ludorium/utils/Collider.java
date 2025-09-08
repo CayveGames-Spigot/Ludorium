@@ -27,7 +27,7 @@ public class Collider implements EntityComponent, Destroyable, Listener, Togglea
 	private Transform referenceTransform;
 	
 	private Interaction interaction;
-	private Vector2f interactionBounds;
+	private Vector2f interactionBounds = new Vector2f(1,1);
 	
 	private Event1<Player> onInteractEvent = new Event1<>();
 	private Event0 onDestroyEvent = new Event0();
@@ -101,6 +101,7 @@ public class Collider implements EntityComponent, Destroyable, Listener, Togglea
 	}
 	
 	public void update() {
+		if (interaction == null) return;
 		interaction.teleport(referenceTransform.getLocation());
 		interaction.setRotation(referenceTransform.getYaw(), referenceTransform.getPitch());
 		

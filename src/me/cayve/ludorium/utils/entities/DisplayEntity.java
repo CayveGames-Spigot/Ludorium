@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.event.Listener;
 import org.bukkit.util.Transformation;
+import org.joml.Vector3f;
 
 import me.cayve.ludorium.utils.functionals.Event.Subscriber;
 import me.cayve.ludorium.utils.functionals.Event0;
@@ -56,6 +57,8 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 		
 		this.type = type;
 		
+		setPivot(new Vector3f(0, -0.5f, 0));
+		
 		this.originTransform.setLocation(location);
 		this.displayTransform.setLocation(location);
 		
@@ -89,12 +92,22 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 	 */
 	public Transform getDisplayTransform() { return displayTransform; }
 	
-	public void teleportToOrigin() { teleportTo(originTransform); }
+	public void teleportToOrigin() { displayTransform.set(originTransform); }
 	
 	/**
 	 * Resets the origin point to the current display location
 	 */
 	public void saveOrigin() { originTransform.set(displayTransform); }
+	
+	/**
+	 * Sets the pivot point of this display. Default is (0, -0.5f, 0) or the bottom center
+	 * @param pivot
+	 */
+	public void setPivot(Vector3f pivot) { 
+		pivot.mul(-1); //Flip it because it's pivot -> offset
+		originTransform.setOffset(pivot);
+		displayTransform.setOffset(pivot);
+	}
 
 	private void teleportTo(Transform transform) {
 		if (!isEnabled()) return;

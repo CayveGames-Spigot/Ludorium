@@ -9,9 +9,7 @@ import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
 import me.cayve.ludorium.utils.animations.Animator;
-import me.cayve.ludorium.utils.animations.LinearAnimation;
-import me.cayve.ludorium.utils.animations.OffsetAnimation;
-import me.cayve.ludorium.utils.animations.SinWaveAnimation;
+import me.cayve.ludorium.utils.animations.rigs.HoverAnimationRig;
 import me.cayve.ludorium.utils.entities.DisplayEntity;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 import me.cayve.ludorium.ymls.TextYml;
@@ -63,7 +61,7 @@ public class InteractionLobby extends GameLobby {
 	private void registerEvents() {
 		onLobbyJoin.subscribe((index) -> displays.get(index).getComponent(Animator.class).cancel());
 		
-		onLobbyLeave.subscribe((index) -> playIdleAnimation(displays.get(index)));
+		onLobbyLeave.subscribe((index) -> displays.get(index).getComponent(Animator.class).play(new HoverAnimationRig()));
 		
 		Timer.register(graceCountdown = new Task(lobbyKey)
 				.setDuration(Config.getInteger("games.graceCountdown") - COUNTDOWN_DURATION).setRefreshRate(.1f)
@@ -105,7 +103,7 @@ public class InteractionLobby extends GameLobby {
 		for (ItemEntity display : displays)
 		{
 			display.enable();
-			playIdleAnimation(display);
+			display.getComponent(Animator.class).play(new HoverAnimationRig());
 		}
 	}
 	
@@ -147,11 +145,6 @@ public class InteractionLobby extends GameLobby {
 		token.getComponent(Collider.class).onInteracted().subscribe((player) -> { onInteraction(player.getUniqueId().toString(), lobbyPosition); });
 		
 		displays.add(token);
-	}
-	
-	private void playIdleAnimation(ItemEntity token) {
-		token.getComponent(Animator.class).setYawAnimation(new LinearAnimation(0, 360).loops().setSpeed(.4f).randomize());
-		token.getComponent(Animator.class).setYAnimation(new OffsetAnimation(1, new SinWaveAnimation(.3f)).loops().setSpeed(.2f).randomize());
 	}
 	
 	private void onInteraction(String playerID, int lobbyPosition) {

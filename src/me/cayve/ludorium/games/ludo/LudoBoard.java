@@ -5,7 +5,6 @@ import java.util.HashMap;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 import org.joml.Vector2f;
 
 import me.cayve.ludorium.games.boards.BlockTileMap;
@@ -18,13 +17,16 @@ import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
 import me.cayve.ludorium.games.lobbies.InteractionLobby;
 import me.cayve.ludorium.games.utils.CustomModel;
 import me.cayve.ludorium.games.utils.GameDie;
+import me.cayve.ludorium.utils.ArrayUtils;
 import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.Config;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
+import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.entities.ItemEntity;
+import me.cayve.ludorium.utils.locational.LocationUtil;
 import me.cayve.ludorium.ymls.TextYml;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -32,6 +34,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 public class LudoBoard extends GameBoard {
 
 	public static final String[] COLOR_ORDER = { "red", "yellow", "green", "blue", "purple", "black" };
+	private static final Vector2f TOKEN_BOUNDS = new Vector2f(.4f, .7f);
 	
 	//0 - Board tile map
 	//1 - Token tile map
@@ -67,15 +70,16 @@ public class LudoBoard extends GameBoard {
 	
 	private void initializeTileMaps(Location origin) {
 		Location[] locationMap = boardMap.mapFromOrigin(origin);
+		Location[] centeredLocationMap = ArrayUtils.map(locationMap, Location.class, x -> LocationUtil.blockCenter(x));
 		
-		HashMap<String, ItemStack> itemMapping = new HashMap<>();
+		HashMap<String, TokenTileMap.TokenInfo> tokenMapping = new HashMap<>();
 		
 		for (int i = 0; i < COLOR_ORDER.length; i++)
 			//Ludo token IDs are COLOR-PIECE#, so only the first part (the color) needs to be mapped
-			itemMapping.put(i + "", CustomModel.get(Ludo.class, COLOR_ORDER[i]));
+			tokenMapping.put(i + "", new TokenTileMap.TokenInfo(CustomModel.get(Ludo.class, COLOR_ORDER[i]), TOKEN_BOUNDS));
 		
 		tileMaps.registerNewMap(new BlockTileMap(locationMap));
-		tileMaps.registerNewMap(new TokenTileMap(locationMap, itemMapping, () -> states.skipTo("ROLL")));
+		tileMaps.registerNewMap(new TokenTileMap(centeredLocationMap, tokenMapping, () -> states.skipTo("ROLL")));
 	}
 	
 	private void createStates() {
@@ -104,19 +108,18 @@ public class LudoBoard extends GameBoard {
 						states.skipTo("SELECT");
 					});
 				})
+				.registerComplete(() -> {
+					lobby.forEachOnlinePlayer((player) -> 
+					ToolbarMessage.clearSourceAndSendImmediate(player, uniqueID + "-roll", 
+						TextYml.getText(player, "in-game.ludo.roll", 
+								Placeholder.parsed("roll", gameInstance.getLastRoll() + ""),
+								Placeholder.component("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
+					.setDuration(selectTimer.getSecondsLeft()).showDuration());
+				})
 				.buildState()
 			.newState("SELECT")
 				.registerAction(() -> {
 					selectTimer.restart();
-					
-					
-					lobby.forEachOnlinePlayer((player) -> 
-						ToolbarMessage.clearSourceAndSendImmediate(player, uniqueID + "-roll", 
-							TextYml.getText(player, "in-game.ludo.roll", 
-									Placeholder.parsed("roll", gameInstance.getLastRoll() + ""),
-									Placeholder.component("label", getPositionLabel(gameInstance.getCurrentPlayerIndex(), player))))
-						.setDuration(selectTimer.getSecondsLeft()).showDuration());
-					
 				}).buildState();
 	}
 	
@@ -126,7 +129,8 @@ public class LudoBoard extends GameBoard {
 		
 		for (int i = 0; i < boardMap.getColorCount(); i++) {
 			ItemEntity token = new ItemEntity(boardMap.getStarterCenter(origin, i), CustomModel.get(Ludo.class, COLOR_ORDER[i]),
-					entity -> new Collider(entity.getOriginTransform(), new Vector2f(1, 1)));
+					entity -> new Collider(entity.getDisplayTransform(), TOKEN_BOUNDS),
+					entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform()));
 			tokens.add(token);
 		}
 		
@@ -148,7 +152,6 @@ public class LudoBoard extends GameBoard {
 	private Component getPositionLabel(int position, Player reader) { return TextYml.getText(reader, "words.colors." + COLOR_ORDER[position]); }
 	
 	private void onGameInstanceUpdate() {
-		
 		if (gameInstance.getWinnerPlayerIndex() != -1)
 		{
 			endGameTimer.restart();
@@ -184,13 +187,16 @@ public class LudoBoard extends GameBoard {
 	private void onTileSelected(int tileIndex) {
 		if (!states.isCurrentState("SELECT"))
 			return;
-		
+
 		String selectedPiece = tileMaps.getMap(1).getTileIDAt(tileIndex);
 		
 		if (selectedPiece != null)
 			gameInstance.selectPiece(selectedPiece);
 		else
 			gameInstance.selectTile(tileIndex);
+		
+		tileMaps.getMap(1).selectTile(gameInstance.getPieceIndex(gameInstance.getSelectedPiece()), true);
+		tileMaps.getMap(0).highlightTile(gameInstance.getSelectedTarget(), true);
 	}
 
 	@Override
@@ -198,7 +204,7 @@ public class LudoBoard extends GameBoard {
 		createStates();
 		initializeTileMaps(origin);
 		gameInstance = new LudoInstance(this::onGameInstanceUpdate, lobby.getOccupiedPositions(), boardMap, false, false, false);
-		onGameInstanceUpdate();
+		onGameInstanceUpdate(); //This will set the state to ROLL once the board is set
 	}
 
 	@Override

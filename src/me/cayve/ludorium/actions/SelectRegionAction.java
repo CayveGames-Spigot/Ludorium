@@ -91,7 +91,7 @@ public class SelectRegionAction extends PlayerAction {
 		
 		animationGrid = region.getLocationGrid().map(BlockEntity.class, 
 				loc -> new BlockEntity(loc, loc.getBlock().getBlockData(),
-						entity -> new Animator(entity.getDisplayTransform())));
+						entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform())));
 
 		GridAnimations.wave(tsk, 
 				animationGrid.map(Animator.class, (entity) -> entity.getComponent(Animator.class)), 
