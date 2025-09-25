@@ -1,20 +1,29 @@
-package me.cayve.ludorium.games.boards;
+package me.cayve.ludorium.games.tilemaps;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.bukkit.Color;
 import org.bukkit.Location;
+import org.bukkit.Particle;
 import org.bukkit.inventory.ItemStack;
 import org.joml.Vector2f;
+import org.joml.Vector3f;
+
+import com.destroystokyo.paper.ParticleBuilder;
 
 import me.cayve.ludorium.main.LudoriumException;
 import me.cayve.ludorium.utils.ArrayListUtils;
 import me.cayve.ludorium.utils.ArrayUtils;
 import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.animations.Animator;
+import me.cayve.ludorium.utils.animations.LinearAnimation;
 import me.cayve.ludorium.utils.animations.rigs.HoverAnimationRig;
 import me.cayve.ludorium.utils.animations.rigs.PathingAnimationRig;
 import me.cayve.ludorium.utils.entities.ItemEntity;
+import me.cayve.ludorium.utils.particles.ParticleEmitter;
+import me.cayve.ludorium.utils.particles.ParticleRig;
+import me.cayve.ludorium.utils.particles.ParticleStroke;
 
 public class TokenTileMap extends TileMap {
 
@@ -45,7 +54,7 @@ public class TokenTileMap extends TileMap {
 	 */
 	public TokenTileMap(Location[] tileLocations, HashMap<String, TokenInfo> tokenMapping, Runnable onMapSet) {
 		super();
-		
+
 		this.tokenMapping = tokenMapping;
 		this.tileLocations = tileLocations;
 		this.displayEntities = new ItemEntity[tileLocations.length];
@@ -64,8 +73,8 @@ public class TokenTileMap extends TileMap {
 		}
 
 		pendingStateUpdate = null;
-		
-		ArrayListUtils<ItemEntity> activeDisplays = new ArrayListUtils<>();
+
+		ArrayList<ItemEntity> activeDisplays = new ArrayList<>();
 		
 		for (ItemEntity entity : displayEntities)
 		{
@@ -84,17 +93,20 @@ public class TokenTileMap extends TileMap {
 			if (state[i] == null || state[i].equals("")) continue;
 			final int index = i;
 			
-			ItemEntity token = activeDisplays.find(x -> x.getID().equals(state[index]));
+			ItemEntity token = ArrayListUtils.find(activeDisplays, x -> x.getID().equals(state[index]));
 			
 			if (token == null)
 				token = createToken(state[i], i);
 			else
-				token.getOriginTransform().setLocation(tileLocations[i]);
+				token.getPositionTransform().setLocation(tileLocations[i]);
+			
+			token.getPositionTransform().resetOffsets();
 			
 			displayEntities[i] = token;
 		}
 		
-		onMapSet.run();
+		if (onMapSet != null)
+			onMapSet.run();
 	}
 	
 	private ItemEntity createToken(String tokenID, int index) {
@@ -102,10 +114,23 @@ public class TokenTileMap extends TileMap {
 		for (String mapKey : tokenMapping.keySet()) {
 			if (tokenID.startsWith(mapKey)) {
 				ItemEntity newToken = new ItemEntity(tileLocations[index], tokenMapping.get(mapKey).tokenItem, tokenID,
-						entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform()),
-						entity -> new Collider(entity.getDisplayTransform(), tokenMapping.get(mapKey).tokenBounds));
+						entity -> new Animator(entity.getPositionTransform()),
+						entity -> new Collider(entity.getPositionTransform(), tokenMapping.get(mapKey).tokenBounds),
+						entity -> new ParticleEmitter(entity.getPositionTransform()));
 
-				newToken.getComponent(Collider.class).onInteracted().subscribe((player) -> publishTileInteraction(player, index));
+				newToken.getComponent(Collider.class).onInteracted().subscribe((player) -> 
+					publishTileInteraction(player, getTileIndexOf(newToken.getID())));
+				
+				//Creates a vertical red line above the token when the token is highlighted
+				ParticleRig rig = new ParticleRig()
+						.addStroke(
+								new ParticleStroke(
+										new ParticleBuilder(Particle.DUST).color(Color.MAROON, .5f).count(1),
+										r -> r.setYAnimation(new LinearAnimation(0, 0.25f))).setTimeIncrement(.5f));
+				rig.getLocalPosition().setOffset(new Vector3f(0, 1, 0));
+				newToken.getComponent(ParticleEmitter.class).play(rig);
+				
+				newToken.getComponent(ParticleEmitter.class).disable();
 				return newToken;
 			}
 		}
@@ -188,22 +213,47 @@ public class TokenTileMap extends TileMap {
 		return displayEntities[index].getID();
 	}
 	
+	private int getTileIndexOf(String tileID) {
+		for (int i = 0; i < displayEntities.length; i++)
+			if (displayEntities[i] != null && displayEntities[i].getID().equals(tileID))
+				return i;
+		return -1;
+	}
+	
+	@Override
+	public void highlightTile(int index, boolean overwriteHighlighted) {
+		if (overwriteHighlighted)
+			unhighlightTile(-1);
+
+		if (index == -1)
+			ArrayUtils.forEachIndex(displayEntities, i -> highlightTile(i, false));
+		else if (displayEntities[index] != null)
+			displayEntities[index].getComponent(ParticleEmitter.class).enable();
+	}
+	
+	@Override
+	public void unhighlightTile(int index) {
+		if (index == -1)
+			ArrayUtils.forEachIndex(displayEntities, this::unhighlightTile);
+		else if (displayEntities[index] != null)
+			displayEntities[index].getComponent(ParticleEmitter.class).disable();
+	}
+	
 	@Override
 	public void selectTile(int index, boolean overwriteSelected) {
 		if (overwriteSelected)
 			unselectTile(-1);
 		
-		if (index == -1 || displayEntities[index] == null)
-			return;
-		
-		displayEntities[index].getComponent(Animator.class).play(new HoverAnimationRig(.4f, .1f, .1f, .1f));
+		if (index == -1)
+			ArrayUtils.forEachIndex(displayEntities, i -> selectTile(i, false));
+		else if (displayEntities[index] != null)
+			displayEntities[index].getComponent(Animator.class).play(new HoverAnimationRig(.4f, .1f, .1f, .1f));
 	}
 	
 	@Override
 	public void unselectTile(int index) {
 		if (index == -1)
-			for (int i = 0; i < displayEntities.length; i++)
-				unselectTile(i);
+			ArrayUtils.forEachIndex(displayEntities, this::unselectTile);
 		else if (displayEntities[index] != null)
 			displayEntities[index].getComponent(Animator.class).cancelRigType(HoverAnimationRig.class);
 	}

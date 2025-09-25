@@ -13,10 +13,10 @@ import org.joml.Vector2f;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.utils.entities.DisplayEntity.EntityComponent;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event1;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 import me.cayve.ludorium.utils.entities.LudoriumEntity;
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
-import me.cayve.ludorium.utils.functionals.Event0;
-import me.cayve.ludorium.utils.functionals.Event1;
 import me.cayve.ludorium.utils.interfaces.Destroyable;
 import me.cayve.ludorium.utils.interfaces.Interactable;
 import me.cayve.ludorium.utils.interfaces.Toggleable;

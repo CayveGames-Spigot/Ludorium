@@ -49,10 +49,10 @@ public class SelectRegionAction extends PlayerAction {
 		
 		this.regionName = regionName;
 		
-		ToolbarMessage.clearSourceAndSend(player, tsk, 
-				TextYml.getText(player, "actions.region.selectFirst",
+		ToolbarMessage.clearSourceAndSendQueue(player.getUniqueId().toString(), tsk, 
+				v -> TextYml.getText(v, "actions.region.selectFirst",
 					Placeholder.component("name", regionName),
-					Placeholder.parsed("progress", ProgressBar.generate(0, 2))))
+					Placeholder.parsed("progress", ProgressBar.newBuild().barCount(2).generate(0))))
 			.setPermanent();
 		selectBlocksAction = new SelectBlocksAction(player, 2, false, this::onCompletedAction, this::onCancelledAction).registerSelectEvent(this::onBlockSelected);
 		selectBlocksAction.setAnimationStates(animateSelection, false);
@@ -68,10 +68,10 @@ public class SelectRegionAction extends PlayerAction {
 	private void onBlockSelected(Block block) 
 	{
 		//Update message
-		ToolbarMessage.clearSourceAndSend(player, tsk, 
-				TextYml.getText(player, "actions.region.selectSecond",
+		ToolbarMessage.clearSourceAndSendQueue(player.getUniqueId().toString(), tsk, 
+				v -> TextYml.getText(v, "actions.region.selectSecond",
 					Placeholder.component("name", regionName),
-					Placeholder.parsed("progress", ProgressBar.generate(selectBlocksAction.getSelectedCount(), 2))))
+					Placeholder.parsed("progress", ProgressBar.newBuild().barCount(2).generate(selectBlocksAction.getSelectedCount()))))
 		.setPermanent();
 	}
 	
@@ -91,7 +91,7 @@ public class SelectRegionAction extends PlayerAction {
 		
 		animationGrid = region.getLocationGrid().map(BlockEntity.class, 
 				loc -> new BlockEntity(loc, loc.getBlock().getBlockData(),
-						entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform())));
+						entity -> new Animator(entity.getPositionTransform())));
 
 		GridAnimations.wave(tsk, 
 				animationGrid.map(Animator.class, (entity) -> entity.getComponent(Animator.class)), 
@@ -105,10 +105,10 @@ public class SelectRegionAction extends PlayerAction {
 			cancelEvent();
 		else //If second select, revert to first selection
 		{
-			ToolbarMessage.clearSourceAndSend(player, tsk, 
-					TextYml.getText(player, "actions.region.selectFirst",
+			ToolbarMessage.clearSourceAndSendQueue(player.getUniqueId().toString(), tsk, 
+					v -> TextYml.getText(v, "actions.region.selectFirst",
 						Placeholder.component("name", regionName),
-						Placeholder.parsed("progress", ProgressBar.generate(2, 2))))
+						Placeholder.parsed("progress", ProgressBar.newBuild().barCount(2).generate(2))))
 			.setPermanent();
 		}
 	}

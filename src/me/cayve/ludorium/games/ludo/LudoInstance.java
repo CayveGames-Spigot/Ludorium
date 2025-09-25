@@ -3,11 +3,17 @@ package me.cayve.ludorium.games.ludo;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Random;
 
 import me.cayve.ludorium.games.GameInstance;
+import me.cayve.ludorium.games.events.ActionChoiceEvent;
 import me.cayve.ludorium.games.events.DiceRollEvent;
+import me.cayve.ludorium.games.events.GameFinishEvent;
+import me.cayve.ludorium.games.events.GameFinishEvent.eGameState;
 import me.cayve.ludorium.games.events.TokenMoveEvent;
 import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
+import me.cayve.ludorium.games.events.TokenSelectionEvent;
+import me.cayve.ludorium.games.events.TurnChangeEvent;
 
 /**
  * @author Cayve
@@ -21,15 +27,18 @@ import me.cayve.ludorium.games.events.TokenMoveEvent.eAction;
  */
 public class LudoInstance extends GameInstance {
 	//Game options
-	private boolean safeSpaces, homeLineup, forceCapture;
+	private boolean safeSpaces, homeLineup, forceCapture, noMovesGracePostStart;
+	private int noMovesGraceAllowance;
 	
 	private ArrayList<Integer> activePlayerIndexes;
 	
 	private LudoMap map;
 	
 	//This corresponds to the index of activePlayerIndexes for the current player
-	private int currentTurn = 0;
+	private int currentTurn = -1;
 	private int currentRoll = -1;
+	
+	private int graceTurnsLeft;
 	
 	private String selectedPiece;
 	private int winnerPlayerIndex = -1;
@@ -38,16 +47,14 @@ public class LudoInstance extends GameInstance {
 	private String[] board; //Empty if no piece present, otherwise contains piece's UUID. Utilizes LudoMap index order
 	private ArrayList<String> completedPieces = new ArrayList<>();
 	
-	private Runnable onInstanceUpdate; //Called during any internal update
-	
-	public LudoInstance(Runnable onInstanceUpdate, ArrayList<Integer> activePlayerIndexes, LudoMap map,
-			boolean safeSpaces, boolean homeLineup, boolean forceCapture) {
-		
-		this.onInstanceUpdate = onInstanceUpdate;
+	public LudoInstance(ArrayList<Integer> activePlayerIndexes, LudoMap map,
+			boolean safeSpaces, boolean homeLineup, boolean forceCapture, int noMovesGraceAllowance, boolean noMovesGracePostStart) {
 		
 		this.safeSpaces = safeSpaces;
 		this.homeLineup = homeLineup;
 		this.forceCapture = forceCapture;
+		this.noMovesGraceAllowance = noMovesGraceAllowance;
+		this.noMovesGracePostStart = noMovesGracePostStart;
 		
 		this.map = map;
 		
@@ -67,10 +74,41 @@ public class LudoInstance extends GameInstance {
 		}
 	}
 	
-	public int getLastRoll() { return currentRoll; }
+	public void start() {
+		if (currentTurn == -1)
+			nextTurn(activePlayerIndexes.get(new Random().nextInt(activePlayerIndexes.size())), LudoTurnDefinition.TURN_ENDED);
+	}
+	
 	public void roll(int rollValue) {
 		currentRoll = rollValue;
 		logger.logEvent(new DiceRollEvent(getCurrentPlayerIndex(), rollValue));
+		
+		String[] moveablePieces = getMoveablePieces();
+		logger.logEvent(new ActionChoiceEvent<String>(getCurrentPlayerIndex(), moveablePieces));
+		
+		if (moveablePieces.length == 0) {
+			if (attemptNoMovesGraceUsage())
+				nextTurn(currentTurn, LudoTurnDefinition.NO_VALID_MOVES_WITH_GRACE);
+			else
+				nextTurn(-1, LudoTurnDefinition.NO_VALID_MOVES);
+		}
+		else
+			dispatchEvents();
+	}
+	
+	private boolean attemptNoMovesGraceUsage() {
+		if (graceTurnsLeft <= 0)
+			return false;
+		
+		if (noMovesGracePostStart) {
+			//If all the player's pieces are not in the starter, disallow
+			for (int i = 0; i < 4; i++)
+				if (board[map.getStarterIndex(getCurrentPlayerIndex(), i)].equals(""))
+					return false;
+		}
+		
+		graceTurnsLeft--;
+		return true;
 	}
 	
 	/**
@@ -96,11 +134,20 @@ public class LudoInstance extends GameInstance {
 		
 		checkForWinner();
 		
-		if (winnerPlayerIndex == -1)
-			//Only go to the next turn if the last roll was not a 6
-			nextTurn(currentRoll == 6 ? currentTurn : -1);
-		
 		selectedPiece = null;
+		//Log that there's no more token selected
+		logger.logEvent(new TokenSelectionEvent(getCurrentPlayerIndex(), new String[0], new Integer[0]));
+		//Log that there's no more actions available
+		logger.logEvent(new ActionChoiceEvent<String>(getCurrentPlayerIndex(), new String[0]));
+		
+		if (winnerPlayerIndex == -1)
+		{
+			//Only go to the next turn if the last roll was not a 6
+			if (currentRoll == 6)
+				nextTurn(currentTurn, LudoTurnDefinition.ROLLED_6_EXTRA_TURN);
+			else
+				nextTurn(-1, LudoTurnDefinition.TURN_ENDED);
+		}
 	}
 	
 	/**
@@ -118,13 +165,22 @@ public class LudoInstance extends GameInstance {
 		else {
 			//Check the contents of the targeted tile
 			int targetIndex = getPieceTarget(pieceID, false);
-	
+
 			//Verify the move is possible and that if its a capture, its not their own piece
 			if (targetIndex == -1 || (!board[targetIndex].isEmpty() && doesPieceMatchCurrentPlayer(pieceID)))
 				return;
 		}
 		
 		selectedPiece = pieceID;
+		
+		if (selectedPiece == null)
+			logger.logEvent(new TokenSelectionEvent(getCurrentPlayerIndex(), new String[0], new Integer[0]));
+		else
+			logger.logEvent(new TokenSelectionEvent(getCurrentPlayerIndex(), 
+					new String[] { selectedPiece }, 
+					new Integer[] { getPieceTarget(selectedPiece, false) }));
+		
+		dispatchEvents();
 	}
 	
 	/**
@@ -139,26 +195,17 @@ public class LudoInstance extends GameInstance {
 		activePlayerIndexes.remove(activePlayerIndexes.indexOf(playerIndex));
 		
 		if (isRemovedPlayersTurn)
-			nextTurn(-1);
+			nextTurn(-1, LudoTurnDefinition.TURN_ENDED);
 		else
-			onInstanceUpdate.run(); //Run an update to refresh any valid positions
+			dispatchEvents(); //Run an update to refresh any valid positions
 	}
 	
 	public String[] getBoardState() { return board; }
-	public int getCurrentPlayerIndex() { return activePlayerIndexes.get(currentTurn); }
-	public boolean canPieceMove(String pieceID) { return getPieceTarget(pieceID, false) != -1; }
-	public String getSelectedPiece() { return selectedPiece; }
-	public int getSelectedTarget() { return getPieceTarget(selectedPiece, false); }
-	
-	/**
-	 * Gets the player index of the winner. -1 if no winner yet
-	 * @return
-	 */
-	public int getWinnerPlayerIndex() { return winnerPlayerIndex; }
-	
-	private boolean doesPieceMatchCurrentPlayer(String pieceID) { return getPlayerIndexFromPiece(pieceID) == getCurrentPlayerIndex(); }
+
 	public int getPlayerIndexFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(0) + ""); }
 	public int getPieceNumberFromPiece(String pieceID) { return Integer.valueOf(pieceID.charAt(2) + ""); }
+	public int getNoMovesGraceAllowance() { return noMovesGraceAllowance; }
+	public int getCurrentNoMovesGraceLeft() { return graceTurnsLeft; }
 	
 	public int getPieceIndex(String pieceID) {
 		for (int i = 0; i < board.length; i++)
@@ -167,6 +214,20 @@ public class LudoInstance extends GameInstance {
 		return -1;
 	}
 	
+	private int getCurrentPlayerIndex() { return currentTurn == -1 ? -1 : activePlayerIndexes.get(currentTurn); }
+	private boolean doesPieceMatchCurrentPlayer(String pieceID) { return getPlayerIndexFromPiece(pieceID) == getCurrentPlayerIndex(); }
+	
+	private String[] getMoveablePieces() {
+		ArrayList<String> moveablePieces = new ArrayList<>();
+		
+		for (int i = 0; i < 4; i++) {
+			String piece = getCurrentPlayerIndex() + "-" + i;
+			
+			if (getPieceTarget(piece, false) != -1)
+				moveablePieces.add(piece);
+		}
+		return moveablePieces.toArray(new String[0]);
+	}
 	/**
 	 * Finds the targeted tile index of the given piece
 	 * based on the current roll. 
@@ -206,13 +267,14 @@ public class LudoInstance extends GameInstance {
 		for (int i = 0; i < board.length; i++) {
 			int boardIndex = map.getTileIndex(i);
 			
-			if (!board[i].equals(pieceID))
+			if (!board[boardIndex].equals(pieceID))
 				continue;
 			
-			if (boardIndex + currentRoll > map.getEndTile(getCurrentPlayerIndex()))
+			int endTileIndex = map.getEndTile(getCurrentPlayerIndex());
+			if (boardIndex <= endTileIndex && boardIndex + currentRoll > endTileIndex)
 			{
-				populatePath(path, boardIndex, boardIndex - map.getEndTile(getCurrentPlayerIndex()));
-				return moveDownHomeStretch(-1, currentRoll - (boardIndex - (map.getEndTile(getCurrentPlayerIndex()))), pieceID, movePiece, path);
+				populatePath(path, boardIndex, boardIndex - endTileIndex);
+				return moveDownHomeStretch(-1, currentRoll - (boardIndex - endTileIndex), pieceID, movePiece, path);
 			}
 			
 			populatePath(path, boardIndex, currentRoll - 1); //- 1 because moveToBoardTile handles last position
@@ -223,7 +285,7 @@ public class LudoInstance extends GameInstance {
 	}
 	
 	private void populatePath(ArrayList<Integer> path, int start, int count) {
-		for (int i = start; i < start + count; i++)
+		for (int i = start; i <= start + count; i++)
 			path.add(i);
 	}
 	
@@ -267,7 +329,7 @@ public class LudoInstance extends GameInstance {
 					if (!movePiece)
 						return tempIndex;
 					
-					populatePath(path, startingPos, j);
+					populatePath(path, tempIndex - j, j);
 					logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
 					
 					completedPieces.add(pieceID);
@@ -288,7 +350,7 @@ public class LudoInstance extends GameInstance {
 		if (!movePiece)
 			return homeIndex;
 		
-		populatePath(path, startingPos, moveAmount);
+		populatePath(path, startingPos - moveAmount, moveAmount);
 		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
 		
 		removePiece(pieceID);
@@ -331,15 +393,21 @@ public class LudoInstance extends GameInstance {
 		}
 	}
 	
-	private void nextTurn(int jumpToTurn) {
+	private void nextTurn(int jumpToTurn, int reason) {
+		int previousTurn = getCurrentPlayerIndex();
+		
 		if (jumpToTurn != -1)
 			currentTurn = jumpToTurn;
 		else
 			currentTurn = (currentTurn + 1) % activePlayerIndexes.size();
 		
+		if (previousTurn != currentTurn)
+			graceTurnsLeft = noMovesGraceAllowance;
 		currentRoll = -1;
 		
-		onInstanceUpdate.run();
+		logger.logEvent(new TurnChangeEvent(getCurrentPlayerIndex(), previousTurn, reason));
+		
+		dispatchEvents();
 	}
 	
 	private void checkForceCapture(String pieceID) {
@@ -371,6 +439,8 @@ public class LudoInstance extends GameInstance {
 		
 		winnerPlayerIndex = getCurrentPlayerIndex();
 		
-		onInstanceUpdate.run();
+		logger.logEvent(new GameFinishEvent(getCurrentPlayerIndex(), eGameState.WINNER));
+		
+		dispatchEvents();
 	}
 }

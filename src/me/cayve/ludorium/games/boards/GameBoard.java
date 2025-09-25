@@ -1,15 +1,15 @@
 package me.cayve.ludorium.games.boards;
 
 import java.util.HashMap;
-import java.util.UUID;
 
 import me.cayve.ludorium.games.lobbies.GameLobby;
+import me.cayve.ludorium.utils.SourceKey;
 
 public abstract class GameBoard {
 	
 	protected GameLobby lobby;
 	protected String boardName;
-	protected String uniqueID = UUID.randomUUID().toString();
+	protected SourceKey uniqueID = new SourceKey();
 	
 	private HashMap<String, Integer> missedTurns = new HashMap<>();
 	private int missedTurnsAllowance = 2;
@@ -25,7 +25,7 @@ public abstract class GameBoard {
 		if (lobby == null)
 			return;
 		
-		lobby.onCountdownComplete.subscribe(this::startGame);
+		lobby.onCountdownComplete().subscribe(this::startGame);
 		lobby.enable();
 	}
 	

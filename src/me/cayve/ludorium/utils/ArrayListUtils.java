@@ -1,21 +1,18 @@
 package me.cayve.ludorium.utils;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-public class ArrayListUtils<T> extends java.util.ArrayList<T> {
+public class ArrayListUtils {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
-
-	public boolean containsIf(Predicate<T> predicate) {
-		return find(predicate) != null;
+	public static <T> boolean containsIf(ArrayList<T> list, Predicate<T> predicate) {
+		return find(list, predicate) != null;
 	}
 	
-	public T find(Predicate<T> predicate) {
-		Iterator<T> iterator = this.iterator();
+	public static <T> T find(ArrayList<T> list, Predicate<T> predicate) {
+		Iterator<T> iterator = list.iterator();
 		while (iterator.hasNext())
 		{
 			T next = iterator.next();
@@ -23,5 +20,12 @@ public class ArrayListUtils<T> extends java.util.ArrayList<T> {
 				return next;
 		}
 		return null;
+	}
+	
+	public static <T> boolean runIfFound(ArrayList<T> list, Predicate<T> predicate, Consumer<T> action) {
+		T result = find(list, predicate);
+		if (result == null) return false;
+		action.accept(result);
+		return true;
 	}
 }

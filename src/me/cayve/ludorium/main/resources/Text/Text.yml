@@ -20,8 +20,11 @@ in-game:
   crouchToSkip: '<italic>(Crouch to skip - <highlight><count>/<total><reset>)'
   skipped: 'Skipped!'
   ludo:
-    roll: '<label>`s turn - Rolled a <highlight><roll><reset>!'
+    roll: '<label>`s turn, roll the dice!'
+    rolled: '<label> rolled a <highlight><roll><reset>!'
     reroll: '<label> rolled a 6, roll again!'
+    no-moves: '<label> had no possible moves!'
+    no-moves-with-grace: '<label> had no possible moves! Try again. <turns-left>'
     captured: '<label> captured <opponent-label>`s piece!'
     blundered: '<label> blundered a piece!'
     won: '<label> won the game!'

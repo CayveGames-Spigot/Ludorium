@@ -1,6 +1,7 @@
 package me.cayve.ludorium.utils.animations.patterns;
 
 import me.cayve.ludorium.utils.ArrayUtils;
+import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.animations.Animator;
@@ -17,7 +18,7 @@ public class ArrayAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(String sourceKey, Animator[] animators, float duration, float overlap, float amplitude, float timeDelay) {
+	public static void wave(SourceKey sourceKey, Animator[] animators, float duration, float overlap, float amplitude, float timeDelay) {
 		wave(sourceKey, animators, 0, duration, overlap, amplitude, timeDelay);
 	}
 	/**
@@ -30,7 +31,7 @@ public class ArrayAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(String sourceKey, Animator[] animators, int startIndex, float duration, float overlap, float amplitude, float timeDelay)
+	public static void wave(SourceKey sourceKey, Animator[] animators, int startIndex, float duration, float overlap, float amplitude, float timeDelay)
 	{
 		wave(sourceKey, animators, startIndex, 1, duration, overlap, amplitude, timeDelay);
 	}
@@ -46,7 +47,7 @@ public class ArrayAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(String sourceKey, Animator[] animators, int startIndex, int direction, float duration, float overlap, float amplitude, float timeDelay) {
+	public static void wave(SourceKey sourceKey, Animator[] animators, int startIndex, int direction, float duration, float overlap, float amplitude, float timeDelay) {
 		int loopSize = direction == 0 ? (int)Math.ceil(animators.length / 2f) : animators.length;
 		
 		float evenAnimDur = duration / animators.length;

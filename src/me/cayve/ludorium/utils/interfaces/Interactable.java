@@ -1,6 +1,6 @@
 package me.cayve.ludorium.utils.interfaces;
 
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 
 public interface Interactable {
 	public Subscriber<?> onInteracted();

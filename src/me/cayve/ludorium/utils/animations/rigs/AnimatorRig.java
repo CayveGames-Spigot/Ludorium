@@ -3,9 +3,9 @@ package me.cayve.ludorium.utils.animations.rigs;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
 import me.cayve.ludorium.utils.animations.Animation;
-import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 import me.cayve.ludorium.utils.interfaces.Cancelable;
 import me.cayve.ludorium.utils.locational.Transform;
 
@@ -19,6 +19,19 @@ public class AnimatorRig implements Cancelable {
 	private Animation<Vector3f> position;
 	private Animation<Vector2f> rotation;
 	private Animation<Transform> transform;
+	
+	private boolean isManual = false;
+	
+	/**
+	 * Creates an animator rig set up for automatic evaluation
+	 */
+	public AnimatorRig() {}
+	
+	/**
+	 * Creates an animator rig and sets the evaluation method
+	 * @param isManual If true, animations will not play automatically. Speed and duration will be obsolete
+	 */
+	public AnimatorRig(boolean isManual) { this.isManual = isManual; }
 	
 	/**
 	 * Sets the transform animation. Overwrites all other animations
@@ -118,11 +131,12 @@ public class AnimatorRig implements Cancelable {
 		pitch = yaw = null;
 	}
 	
+	/**
+	 * Evaluates the current rig based on all animation durations - AUTOMATIC MODE ONLY
+	 * @return
+	 */
 	public Transform evaluate() {
-		Transform offset = new Transform();
-		
-		//Default is set to 1, but this is offset so it needs to be 0
-		offset.setScale(0);
+		Transform offset = new Transform(true);
 		
 		if (transform != null)
 			offset = transform.evaluate();
@@ -150,13 +164,61 @@ public class AnimatorRig implements Cancelable {
 					offset.setYaw(yaw.evaluate());
 			}
 			
-			if (scale != null)
-				offset.setScale(scale.evaluate());
+			if (this.scale != null)
+				offset.setScale(this.scale.evaluate());
 		}
 		
 		return offset;
 	}
 	
+	/**
+	 * Evaluates the current rig based on the given time, used in manual mode
+	 * @param time
+	 * @return
+	 */
+	public Transform evaluate(float time) {
+		//This method needs to be copied since each animation has its own time variable in automatic mode.
+		//Having evaluate() internally call this method would not work
+		
+		Transform offset = new Transform(true);
+		
+		if (transform != null)
+			offset = transform.evaluate(time);
+		else
+		{
+			if (position != null)
+				offset.setPosition(position.evaluate(time));
+			else
+			{
+				if (x != null)
+					offset.setX(x.evaluate(time));
+				if (y != null)
+					offset.setY(y.evaluate(time));
+				if (z != null)
+					offset.setZ(z.evaluate(time));
+			}
+			
+			if (rotation != null)
+				offset.setRotation(rotation.evaluate(time));
+			else
+			{
+				if (pitch != null)
+					offset.setPitch(pitch.evaluate(time));
+				if (yaw != null)
+					offset.setYaw(yaw.evaluate(time));
+			}
+			
+			if (scale != null)
+				offset.setScale(scale.evaluate(time));
+		}
+		
+		return offset;
+	}
+	
+	/**
+	 * Whether any animation in this rig is still animating - AUTOMATIC MODE ONLY
+	 * @return
+	 */
 	public boolean isAnimating() {
 		boolean isAnimating = false;
 		if (	(transform != null && !transform.isComplete()) ||
@@ -178,11 +240,12 @@ public class AnimatorRig implements Cancelable {
 	}
 	
 	private void setAnimationListeners(Animation<?> animation) {
-		animation.registerListeners(onUpdateEvent, this::onAnyAnimationComplete);
+		if (!isManual)
+			animation.registerListeners(onUpdateEvent, this::onAnyAnimationComplete);
 	}
 	
 	/**
-	 * Cancels all animations on all axes
+	 * Cancels all animations on all axes - AUTOMATIC MODE ONLY
 	 */
 	@Override
 	public void cancel() {
@@ -211,7 +274,19 @@ public class AnimatorRig implements Cancelable {
 		onCancelEvent.run();
 	}
 	
+	/**
+	 * Called on any animation update - AUTOMATIC MODE ONLY
+	 * @return
+	 */
 	public Subscriber<Runnable> onUpdate() { return onUpdateEvent.getSubscriber(); }
+	/**
+	 * Called when entire rig is complete - AUTOMATIC MODE ONLY
+	 * @return
+	 */
 	public Subscriber<Runnable> onCompleted() { return onCompleteEvent.getSubscriber(); }
+	/**
+	 * Called when entire rig is canceled - AUTOMATIC MODE ONLY
+	 * @return
+	 */
 	@Override public Subscriber<Runnable> onCanceled() { return onCancelEvent.getSubscriber(); }
 }

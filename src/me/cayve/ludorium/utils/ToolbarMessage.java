@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.function.BiPredicate;
+import java.util.function.Function;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
@@ -15,37 +18,50 @@ import net.kyori.adventure.text.format.NamedTextColor;
 
 public class ToolbarMessage {
 
+	public static final float DEFAULT_MESSAGE_DURATION = 3f;
 	public static class Message {
 		
 		public enum eType { MESSAGE, SUCCESS, WARNING, ERROR }
 		
-		private Component message;
+		private Function<Player, Component> message;
 		private boolean isMuted;
 		private boolean isPermanent;
 		private boolean clearIfSkipped;
-		private float duration = 3;
+		private float duration = DEFAULT_MESSAGE_DURATION;
+		private Task linkedTimer;
 		private int priority = 0;
 		private boolean refreshEveryTick;
 		private boolean showDuration;
+		private float showDurationDelay = 0;
 		private eType type = eType.MESSAGE;
-		private String sourceKey;
+		private SourceKey sourceKey;
 		
-		public Message(Component message, String sourceKey) {
+		/**
+		 * Message object that will be sent to a viewer
+		 * @param message Function to retrieve the message contents based on the viewer of the message
+		 */
+		public Message(Function<Player, Component> message) {
 			this.message = message;
-			this.sourceKey = sourceKey;
 		}
 		
+		/**
+		 * @param percentDelay Delay showing the duration until it is complete by this percentage.
+		 * For example, if set to .25f, the progress bar will not appear until 25% of the duration has passed<p>
+		 * The progress bar will not jump to 25%, for example, but rather it will represent the last 75% instead
+		 */
+		public Message showDuration(float percentDelay) { showDurationDelay = percentDelay; showDuration(); return this; }
+		public Message showDuration() { showDuration = true; refreshEveryTick(); return this; }
 		public Message setType(eType type) { this.type = type; return this; }
 		public Message setMuted() { isMuted = true; return this; }
 		public Message setPermanent() { isPermanent = true; return this; }
-		public Message showDuration() { showDuration = true; return this; }
 		public Message clearIfSkipped() { clearIfSkipped = true; return this; }
 		public Message setDuration(float duration) { this.duration = duration; return this; }
 		public Message setPriority(int priority) { this.priority = priority; return this; }
 		public Message refreshEveryTick() { this.refreshEveryTick = true; return this; }
+		public Message linkDurationToTimer(Task timer) { linkedTimer = timer; setDuration(timer.getSecondsLeft()); return this; }
+		private Message setSource(SourceKey sourceKey) { this.sourceKey = sourceKey; return this; }
 		
-		public Component getMessage() { return message; }
-		public void updateMessage(Component newMessage) { this.message = newMessage; }
+		public void updateMessage(Function<Player, Component> newMessage) { this.message = newMessage; }
 		
 		private ActiveMessage createActiveMessage() { return new ActiveMessage(this); }
 	}
@@ -63,33 +79,36 @@ public class ToolbarMessage {
 		
 		public ActiveMessage(Message template) {
 			this.template = template;
+			duration = template.duration;
 		}
 		
 		public void update(float deltaTime) {
-			if (!hasActivated) {
+			if (!hasActivated)
 				hasActivated = true;
-				
-				//Duration needs to be applied here to allow for chaining: ".sendQueue().setDuration()"
-				//Since sendImmediate and sendQueue create this object immediately
-				duration = template.duration; 
-			}
 			
-			duration += deltaTime;
+			if (template.linkedTimer == null)
+				duration += deltaTime;
+			else
+				duration = template.linkedTimer.getSecondsLeft();
 		}
 		
 		/**
-		 * Calculates the elapsed percentage time
-		 * 8 seconds left on a 10 second display = 20%
+		 * Calculates the duration to display based (0-1) on
+		 * how much time is left and the duration delay percentage
 		 */
-		public float getElapsedPercent() 
+		public float getDurationDisplay() 
 		{
-			if (!hasActivated) return 0;
+			if (!hasActivated) return 1;
 			
-			return 1 - (duration / template.duration); 
+			return (duration) / ((1 - template.showDurationDelay) * template.duration); 
+		}
+		
+		public boolean shouldDisplayDuration() {
+			return template.showDuration && 1 - (duration / template.duration) >= template.showDurationDelay;
 		}
 	}
 	
-	private static HashMap<Player, ArrayList<ActiveMessage>> messageQueues;
+	private static HashMap<String, ArrayList<ActiveMessage>> messageQueues;
 	private static boolean initialized = false;
 	private static Task refreshTimer, sendTimer;
 	
@@ -97,25 +116,25 @@ public class ToolbarMessage {
 		if (initialized) return;
 		initialized = true;
 		
-		messageQueues = new HashMap<Player, ArrayList<ActiveMessage>>();
+		messageQueues = new HashMap<String, ArrayList<ActiveMessage>>();
 		
 		refreshTimer = new Task().setRefreshRate(0).registerOnUpdate(() -> {
 			organizeMap();
 			
-			for (Player player : messageQueues.keySet()) {
-				ActiveMessage targetMessage = messageQueues.get(player).get(0);
+			for (String playerID : messageQueues.keySet()) {
+				ActiveMessage targetMessage = messageQueues.get(playerID).get(0);
 				
 				//If the message needs to update every tick (timers)
 				//If the message has not been sent yet
 				if (targetMessage.template.refreshEveryTick || !targetMessage.hasActivated)
-					sendToolbarMessage(player, targetMessage);
+					sendToolbarMessage(playerID, targetMessage);
 				
 				//Updates all active messages
 				targetMessage.update(-(1 / 20f));
 				
 				//If the message is not permanent and ran out of time, remove it
 				if (!targetMessage.template.isPermanent && targetMessage.duration <= 0)
-					messageQueues.get(player).remove(targetMessage);
+					messageQueues.get(playerID).remove(targetMessage);
 			}
 		});
 
@@ -126,37 +145,37 @@ public class ToolbarMessage {
 	}
 	
 	private static void organizeMap() {
-		Iterator<Entry<Player, ArrayList<ActiveMessage>>> mapIterator = messageQueues.entrySet().iterator();
+		Iterator<Entry<String, ArrayList<ActiveMessage>>> mapIterator = messageQueues.entrySet().iterator();
 		
 		while (mapIterator.hasNext()) {
-			Entry<Player, ArrayList<ActiveMessage>> entry = mapIterator.next();
+			Entry<String, ArrayList<ActiveMessage>> entry = mapIterator.next();
 			
-			Player player = entry.getKey();
+			String playerID = entry.getKey();
 			
-			if (!messageQueues.get(player).isEmpty()) {
+			if (!messageQueues.get(playerID).isEmpty()) {
 				//Retrieve the first message of the queue
 				ActiveMessage targetMessage = entry.getValue().get(0);
 				
 				//Test if any other messages in the queue have a higher priority
-				for (int i = 1; i < messageQueues.get(player).size(); i++) {
-					ActiveMessage curr = messageQueues.get(player).get(i);
+				for (int i = 1; i < messageQueues.get(playerID).size(); i++) {
+					ActiveMessage curr = messageQueues.get(playerID).get(i);
 					
 					if (hasPriorityOver(curr, targetMessage)) {
 						if (targetMessage.template.clearIfSkipped && targetMessage.hasActivated)
 						{
-							messageQueues.get(player).remove(i);
+							messageQueues.get(playerID).remove(i);
 							i--;
 						}
 						
 						targetMessage = curr;
-						messageQueues.get(player).remove(targetMessage);
-						messageQueues.get(player).add(0, targetMessage);
+						messageQueues.get(playerID).remove(targetMessage);
+						messageQueues.get(playerID).add(0, targetMessage);
 					}
 					//If a message fails to have higher priority and is clearIfSkipped
 					//AND
 					//Has been activated OR requests immediate
 					else if (curr.template.clearIfSkipped && (curr.hasActivated || curr.requestsImmediate)) {
-						messageQueues.get(player).remove(i);
+						messageQueues.get(playerID).remove(i);
 						i--;
 					}
 				}
@@ -166,7 +185,7 @@ public class ToolbarMessage {
 			}
 
 			//Clear the map of the player if they have no more message
-			if (messageQueues.get(player).isEmpty())
+			if (messageQueues.get(playerID).isEmpty())
 				mapIterator.remove();
 		}
 	}
@@ -196,9 +215,9 @@ public class ToolbarMessage {
 	 * @param message The message to update
 	 */
 	public static void forceUpdate(Message message) {
-		for (Player player : messageQueues.keySet()) {
-			if (messageQueues.get(player).get(0).template.equals(message))
-				sendToolbarMessage(player, messageQueues.get(player).get(0));
+		for (String playerID : messageQueues.keySet()) {
+			if (messageQueues.get(playerID).get(0).template.equals(message))
+				sendToolbarMessage(playerID, messageQueues.get(playerID).get(0));
 		}
 	}
 	
@@ -208,12 +227,12 @@ public class ToolbarMessage {
 	public static void forceUpdate() {
 		organizeMap();
 		
-		for (Player player : messageQueues.keySet()) {
-			ActiveMessage targetMessage = messageQueues.get(player).get(0);
+		for (String playerID : messageQueues.keySet()) {
+			ActiveMessage targetMessage = messageQueues.get(playerID).get(0);
 			
 			//Re-send all activated messages (ignore constant refresh, other task handles those)
 			if (targetMessage.hasActivated && !targetMessage.template.refreshEveryTick)
-				sendToolbarMessage(player, targetMessage);
+				sendToolbarMessage(playerID, targetMessage);
 		}
 	}
 	
@@ -221,19 +240,19 @@ public class ToolbarMessage {
 	 * Clears all messages with the given source key
 	 * @param sourceKey The source key to compare
 	 */
-	public static void clearAllFromSource(String sourceKey) {
-		clearIf((player, testMessage) -> testMessage.sourceKey != null && testMessage.sourceKey.startsWith(sourceKey));
+	public static void clearAllFromSource(SourceKey sourceKey) {
+		clearIf((player, testMessage) -> testMessage.sourceKey != null && sourceKey.equals(testMessage.sourceKey));
 	}
 	
 	/**
 	 * Clears all messages for a player from a given source
-	 * @param player The player to clear the messages for
+	 * @param playerID The player to clear the messages for
 	 * @param sourceKey The source key to clear
 	 */
-	public static void clearPlayerFromSource(Player player, String sourceKey) {
+	public static void clearPlayerFromSource(String playerID, SourceKey sourceKey) {
 		clearIf((testPlayer, testMessage) -> 
-			testMessage.sourceKey != null && testMessage.sourceKey.startsWith(sourceKey) && 
-			player.getUniqueId().toString().equals(testPlayer.getUniqueId().toString()));
+			testMessage.sourceKey != null && sourceKey.equals(testMessage.sourceKey) && 
+			playerID.equals(testPlayer));
 	}
 	
 	/**
@@ -248,20 +267,20 @@ public class ToolbarMessage {
 	 * Clears a message based on given predicate
 	 * @param predicate The predicate to evaluate
 	 */
-	public static void clearIf(BiPredicate<Player, Message> predicate) {
+	public static void clearIf(BiPredicate<String, Message> predicate) {
 		boolean update = false;
 
-		Iterator<Player> playerIterator = messageQueues.keySet().iterator();
+		Iterator<String> playerIterator = messageQueues.keySet().iterator();
 		while (playerIterator.hasNext()) {
-			Player player = playerIterator.next();
+			String playerID = playerIterator.next();
 			//Go top down to avoid list removal issues (multiple of the same message can also exist)
-			int messageIndex = messageQueues.get(player).size() - 1;
+			int messageIndex = messageQueues.get(playerID).size() - 1;
 			while (messageIndex >= 0) {
-				if (predicate.test(player, messageQueues.get(player).get(messageIndex).template))
+				if (predicate.test(playerID, messageQueues.get(playerID).get(messageIndex).template))
 				{
-					messageQueues.get(player).remove(messageIndex);
+					messageQueues.get(playerID).remove(messageIndex);
 					
-					if (messageQueues.get(player).isEmpty())
+					if (messageQueues.get(playerID).isEmpty())
 						playerIterator.remove();
 				}
 				if (messageIndex == 0) //If the message is currently displayed, clear it
@@ -276,111 +295,162 @@ public class ToolbarMessage {
 	
 	/**
 	 * Clears all messages a player has
-	 * @param player The player to clear
+	 * @param playerID The player to clear
 	 */
-	public static void clearPlayer(Player player) {
-		if (messageQueues.containsKey(player))
-			messageQueues.remove(player);
+	public static void clearPlayer(String playerID) {
+		if (messageQueues.containsKey(playerID))
+			messageQueues.remove(playerID);
 		
-		sendToolbarMessage(player, null);
-	}
-	
-	/**
-	 * Quick way to clear all a player's messages from source and queue a new message. 
-	 * Used if a source will only ever be sending one message at a time.
-	 * @param player The player to send the message to
-	 * @param source The source the message came from
-	 * @param message The message to send
-	 * @return self
-	 */
-	public static Message clearSourceAndSend(Player player, String source, Component message) {
-		clearPlayerFromSource(player, source);
-		
-		return sendQueue(player, source, message);
+		sendToolbarMessage(playerID, null);
 	}
 	
 	/**
 	 * Quick way to clear all a player's messages from source and immediately send a new message. 
 	 * Used if a source will only ever be sending one message at a time.
 	 * Keep in mind other sources might still have messages associated with the player
-	 * @param player The player to send the message to
+	 * @param playerID The player to send the message to
+	 * @param source The source the message came from
+	 * @param message Function to retrieve the message contents based on the viewer of the message
+	 * @return self
+	 */
+	public static Message clearSourceAndSendImmediate(String playerID, SourceKey source, Function<Player, Component> message) {
+		return clearSourceAndSendImmediate(playerID, source, new Message(message));
+	}
+	
+	/**
+	 * Quick way to clear all a player's messages from source and immediately send a new message. 
+	 * Used if a source will only ever be sending one message at a time.
+	 * Keep in mind other sources might still have messages associated with the player
+	 * @param playerID The player to send the message to
 	 * @param source The source the message came from
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message clearSourceAndSendImmediate(Player player, String source, Component message) {
-		clearPlayerFromSource(player, source);
+	public static Message clearSourceAndSendImmediate(String playerID, SourceKey source, Message message) {
+		clearPlayerFromSource(playerID, source);
 		
-		return sendImmediate(player, source, message);
+		return sendImmediate(playerID, source, message);
 	}
 	
 	/**
 	 * Simply adds to front of queue, if a higher priority exists it will not appear yet
-	 * @param player The player to send the message to
-	 * @param message The message to send
+	 * @param playerID The player to send the message to
+	 * @param message Function to retrieve the message contents based on the viewer of the message
 	 * @return self
 	 */
-	public static Message sendImmediate(Player player, Component message) {
-		return sendImmediate(player, null, message);
-	}
-	
-	/**
-	 * Adds to back of queue, if has higher priority than others it will move further up
-	 * @param player The player to send the message to
-	 * @param message The message to send
-	 * @return self
-	 */
-	public static Message sendQueue(Player player, Component message) {
-		return sendQueue(player, null, message);
+	public static Message sendImmediate(String playerID, Function<Player, Component> message) {
+		return sendImmediate(playerID, null, message);
 	}
 	
 	/**
 	 * Simply adds to front of queue, if a higher priority exists it will not appear yet
-	 * @param player The player to send the message to
+	 * @param playerID The player to send the message to
+	 * @param source The source the message came from
+	 * @param message Function to retrieve the message contents based on the viewer of the message
+	 * @return self
+	 */
+	public static Message sendImmediate(String playerID, SourceKey source, Function<Player, Component> message) {
+		return sendImmediate(playerID, source, new Message(message));
+	}
+	
+	/**
+	 * Simply adds to front of queue, if a higher priority exists it will not appear yet
+	 * @param playerID The player to send the message to
 	 * @param source The source the message came from
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendImmediate(Player player, String source, Component message) {
-		if (!messageQueues.containsKey(player))
-			messageQueues.put(player, new ArrayList<ActiveMessage>());
+	public static Message sendImmediate(String playerID, SourceKey source, Message message) {
+		if (!messageQueues.containsKey(playerID))
+			messageQueues.put(playerID, new ArrayList<ActiveMessage>());
 		
-		ActiveMessage messageObj = new Message(message, source).createActiveMessage();
+		ActiveMessage messageObj = message.setSource(source).createActiveMessage();
 		
 		messageObj.requestsImmediate = true;
 		
-		messageQueues.get(player).add(0, messageObj);
+		messageQueues.get(playerID).add(0, messageObj);
 		
 		return messageObj.template;
 	}
 	
 	/**
-	 * Adds to back of queue, if has higher priority than others it will move further up
-	 * @param player The player to send the message to
+	 * Quick way to clear all a player's messages from source and queue a new message. 
+	 * Used if a source will only ever be sending one message at a time.
+	 * @param playerID The player to send the message to
+	 * @param source The source the message came from
+	 * @param message Function to retrieve the message contents based on the viewer of the message
+	 * @return self
+	 */
+	public static Message clearSourceAndSendQueue(String playerID, SourceKey source, Function<Player, Component> message) {
+		return clearSourceAndSendQueue(playerID, source, new Message(message));
+	}
+	
+	/**
+	 * Quick way to clear all a player's messages from source and queue a new message. 
+	 * Used if a source will only ever be sending one message at a time.
+	 * @param playerID The player to send the message to
 	 * @param source The source the message came from
 	 * @param message The message to send
 	 * @return self
 	 */
-	public static Message sendQueue(Player player, String source, Component message) {
-		if (!messageQueues.containsKey(player))
-			messageQueues.put(player, new ArrayList<ActiveMessage>());
+	public static Message clearSourceAndSendQueue(String playerID, SourceKey source, Message message) {
+		clearPlayerFromSource(playerID, source);
 		
-		Message messageObj = new Message(message, source);
-		messageQueues.get(player).add(messageObj.createActiveMessage());
-		
-		return messageObj;
+		return sendQueue(playerID, source, message);
 	}
 	
-	private static void sendToolbarMessage(Player player, ActiveMessage message) {
+	/**
+	 * Adds to back of queue, if has higher priority than others it will move further up
+	 * @param playerID The player to send the message to
+	 * @param message Function to retrieve the message contents based on the viewer of the message
+	 * @return self
+	 */
+	public static Message sendQueue(String playerID, Function<Player, Component> message) {
+		return sendQueue(playerID, null, message);
+	}
+	
+	/**
+	 * Adds to back of queue, if has higher priority than others it will move further up
+	 * @param playerID The player to send the message to
+	 * @param source The source the message came from
+	 * @param message Function to retrieve the message contents based on the viewer of the message
+	 * @return self
+	 */
+	public static Message sendQueue(String playerID, SourceKey source, Function<Player, Component> message) {
+		return sendQueue(playerID, source, new Message(message));
+	}
+	
+	/**
+	 * Adds to back of queue, if has higher priority than others it will move further up
+	 * @param playerID The player to send the message to
+	 * @param source The source the message came from
+	 * @param message The message to send
+	 * @return self
+	 */
+	public static Message sendQueue(String playerID, SourceKey source, Message message) {
+		if (!messageQueues.containsKey(playerID))
+			messageQueues.put(playerID, new ArrayList<ActiveMessage>());
+		
+		messageQueues.get(playerID).add(message.setSource(source).createActiveMessage());
+		
+		return message;
+	}
+	
+	private static void sendToolbarMessage(String playerID, ActiveMessage message) {
+		Player player = Bukkit.getOfflinePlayer(UUID.fromString(playerID)).getPlayer();
+		
 		if (player == null || !player.isOnline()) return;
 		
-		Component messageComponent = message == null ? Component.empty() : message.template.message;
+		Component messageComponent = message == null ? Component.empty() : message.template.message.apply(player);
 
 		if (message != null) {
-			if (message.template.showDuration)
-				messageComponent = messageComponent
+			if (message.shouldDisplayDuration())
+				messageComponent = 
+					Component.text(ProgressBar.newBuild().reverse().barCount(10).customCharacters('|', '.').generate(message.getDurationDisplay()))
 					.append(Component.text(" "))
-					.append(Component.text(ProgressBar.generate(message.getElapsedPercent())));
+					.append(messageComponent)
+					.append(Component.text(" "))
+					.append(Component.text(ProgressBar.newBuild().barCount(10).customCharacters('|', '.').generate(message.getDurationDisplay())));
 			
 			NamedTextColor textColor = switch(message.template.type) {
 				case Message.eType.ERROR -> NamedTextColor.RED;

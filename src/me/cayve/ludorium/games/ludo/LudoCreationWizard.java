@@ -74,8 +74,9 @@ public class LudoCreationWizard extends GameCreationWizard {
 			if (i != 0)
 				colors = colors.append(Component.text("->"));
 		}
-
-		ToolbarMessage.sendQueue(player, tsk, TextYml.getText(player, "wizards.ludo.colorVerification", Placeholder.component("colors", colors)))
+		
+		final Component component = TextYml.getText(player, "wizards.ludo.colorVerification", Placeholder.component("colors", colors));
+		ToolbarMessage.sendQueue(player.getUniqueId().toString(), sourceKey, x -> component)
 			.setDuration(12).showDuration().clearIfSkipped();
 	}
 	
@@ -87,8 +88,8 @@ public class LudoCreationWizard extends GameCreationWizard {
 			.newState()
 				.registerProgress(this::promptColorOrderVerification)
 				.registerAction(() -> { //Started manual mode
-					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectTiles",
-							Placeholder.component("color", TextYml.getText(player, "words.colors." + LudoBoard.COLOR_ORDER[0], raw -> raw.toUpperCase()))))
+					ToolbarMessage.clearSourceAndSendQueue(player.getUniqueId().toString(), sourceKey.withContext("state"), x -> TextYml.getText(x, "wizards.ludo.selectTiles",
+							Placeholder.component("color", TextYml.getText(x, "words.colors." + LudoBoard.COLOR_ORDER[0], raw -> raw.toUpperCase()))))
 					.setPermanent();
 					
 					setNewAction(new SelectBlocksAction(player, -1, false, this::onCompletedAction, this::onCanceledAction));
@@ -105,15 +106,15 @@ public class LudoCreationWizard extends GameCreationWizard {
 					map.removeLastHomeSet();
 				})
 				.registerAction(() -> {
-					ToolbarMessage.clearSourceAndSend(player, stateTsk, TextYml.getText(player, "wizards.ludo.selectHome",
-							Placeholder.component("color", TextYml.getText(player, "words.colors." 
+					ToolbarMessage.clearSourceAndSendQueue(player.getUniqueId().toString(), sourceKey.withContext("state"), x -> TextYml.getText(x, "wizards.ludo.selectHome",
+							Placeholder.component("color", TextYml.getText(x, "words.colors." 
 									+ LudoBoard.COLOR_ORDER[stateMachine.contextualIndex("homeColor")], (raw) -> raw.toUpperCase()))))
 							.setPermanent();
 					 
 					setNewAction(new SelectBlocksAction(player, 4, false, this::onCompletedAction, this::onCanceledAction));
 				})
 				.registerComplete(() -> {
-					ToolbarMessage.clearAllFromSource(stateTsk);
+					ToolbarMessage.clearAllFromSource(sourceKey.withContext("state"));
 					
 					map.addHomeSet(((SelectBlocksAction) currentAction).getLocations());
 				}).buildState()

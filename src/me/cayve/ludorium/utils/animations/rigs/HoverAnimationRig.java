@@ -1,7 +1,7 @@
 package me.cayve.ludorium.utils.animations.rigs;
 
+import me.cayve.ludorium.utils.animations.FunctionalAnimation;
 import me.cayve.ludorium.utils.animations.LinearAnimation;
-import me.cayve.ludorium.utils.animations.OffsetAnimation;
 import me.cayve.ludorium.utils.animations.SinWaveAnimation;
 
 public class HoverAnimationRig extends AnimatorRig {
@@ -25,7 +25,7 @@ public class HoverAnimationRig extends AnimatorRig {
 	}
 	
 	private void construct(float raisedOffset, float amplitude, float waveSpeed, float rotateSpeed) {
-		setYawAnimation(new LinearAnimation(0, 360).loops().setSpeed(rotateSpeed).randomize());
-		setYAnimation(new OffsetAnimation(raisedOffset, new SinWaveAnimation(amplitude)).loops().setSpeed(waveSpeed).randomize());
+		setYawAnimation(new LinearAnimation(0, 360).loops().setSpeed(rotateSpeed).randomizeOffset());
+		setYAnimation(new FunctionalAnimation(x -> x + raisedOffset, new SinWaveAnimation(amplitude)).loops().setSpeed(waveSpeed).randomizeOffset());
 	}
 }

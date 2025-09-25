@@ -97,13 +97,13 @@ public class GameCommand {
 							if (BoardList.remove(instanceName, type))
 								sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
 										"commands.instanceDeleteSuccess",
-										Placeholder.parsed("<name>", instanceName),
-										Placeholder.parsed("<game>", label)));
+										Placeholder.parsed("name", instanceName),
+										Placeholder.parsed("game", label)));
 							else //Failed to delete instance
 								sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
 										"commands.instanceDeleteFailure",
-										Placeholder.parsed("<name>", instanceName),
-										Placeholder.parsed("<game>", label)));
+										Placeholder.parsed("name", instanceName),
+										Placeholder.parsed("game", label)));
 							return 1;
 						}).build())
 					.build();
@@ -120,7 +120,7 @@ public class GameCommand {
 			
 			sender.sendMessage(TextYml.getText((sender instanceof Player ? (Player) sender : null),
 					nameList.size() == 0 ? "commands.noGameInstances" : "commands.instanceListHeader",
-							Placeholder.parsed("<game>", label)));
+							Placeholder.parsed("game", label)));
 			for (String board : nameList)
 				sender.sendMessage(board);
 			

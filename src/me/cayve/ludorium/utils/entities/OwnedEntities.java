@@ -2,8 +2,8 @@ package me.cayve.ludorium.utils.entities;
 
 import java.util.ArrayList;
 
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
-import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 import me.cayve.ludorium.utils.interfaces.Destroyable;
 
 public class OwnedEntities implements Destroyable {

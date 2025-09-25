@@ -10,11 +10,12 @@ import org.bukkit.Location;
 import org.bukkit.entity.Display;
 import org.bukkit.event.Listener;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.joml.Vector3f;
 
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
-import me.cayve.ludorium.utils.functionals.Event0;
-import me.cayve.ludorium.utils.functionals.Event1;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event1;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 import me.cayve.ludorium.utils.interfaces.Destroyable;
 import me.cayve.ludorium.utils.interfaces.Toggleable;
 import me.cayve.ludorium.utils.locational.Transform;
@@ -26,7 +27,8 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 	protected T display;
 	private String displayID = UUID.randomUUID().toString();
 	
-	protected Transform originTransform = new Transform(), displayTransform = new Transform();
+	protected Transform position = new Transform();
+	protected Vector3f pivot = new Vector3f(0,0,0);
 	private Class<T> type;
 
 	private Map<Class<? extends EntityComponent>, EntityComponent> components = new HashMap<>();
@@ -57,10 +59,7 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 		
 		this.type = type;
 		
-		setPivot(new Vector3f(0, -0.5f, 0));
-		
-		this.originTransform.setLocation(location);
-		this.displayTransform.setLocation(location);
+		this.position.setLocation(location);
 		
 		if (displayID != null)
 			this.displayID = displayID;
@@ -72,8 +71,8 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 			if (!this.components.containsKey(component.getClass()))
 				this.components.put(component.getClass(), component);
 		}
-		
-		displayTransform.onUpdated().subscribe(() -> teleportTo(displayTransform));
+
+		position.onUpdated().subscribe(this::updatePosition);
 		
 		enable();
 	}
@@ -81,42 +80,28 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 	public String getID() { return displayID; }
 	
 	/**
-	 * Returns the mutable location of the origin point
+	 * Returns the mutable location of the display
 	 * @return
 	 */
-	public Transform getOriginTransform() { return originTransform; }
+	public Transform getPositionTransform() { return position; }
 	
 	/**
-	 * Returns the mutable location of the current display point
-	 * @return
-	 */
-	public Transform getDisplayTransform() { return displayTransform; }
-	
-	public void teleportToOrigin() { displayTransform.set(originTransform); }
-	
-	/**
-	 * Resets the origin point to the current display location
-	 */
-	public void saveOrigin() { originTransform.set(displayTransform); }
-	
-	/**
-	 * Sets the pivot point of this display. Default is (0, -0.5f, 0) or the bottom center
+	 * Sets the pivot point of this display
 	 * @param pivot
 	 */
 	public void setPivot(Vector3f pivot) { 
 		pivot.mul(-1); //Flip it because it's pivot -> offset
-		originTransform.setOffset(pivot);
-		displayTransform.setOffset(pivot);
+		this.pivot = pivot;
 	}
 
-	private void teleportTo(Transform transform) {
+	private void updatePosition() {
 		if (!isEnabled()) return;
 
-		display.teleport(transform.getLocation());
-		display.setRotation(transform.getYaw(), transform.getPitch());
+		display.teleport(position.getLocation().add(Vector.fromJOML(pivot)));
+		display.setRotation(position.getYaw(), position.getPitch());
 		
 		Transformation displayTransformation = display.getTransformation();
-		displayTransformation.getScale().set(transform.getScale());
+		displayTransformation.getScale().set(position.getScale());
 		display.setTransformation(displayTransformation);
 	}
 	
@@ -146,7 +131,7 @@ public class DisplayEntity<T extends Display> implements Destroyable, Toggleable
 	public void enable() {
 		disable();
 			
-		display = LudoriumEntity.spawn(originTransform.getLocation(), type);
+		display = LudoriumEntity.spawn(position.getLocation(), type);
 		
 		forEachComponentWith(Toggleable.class, x -> x.enable());
 		

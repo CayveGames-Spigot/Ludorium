@@ -1,27 +1,43 @@
 package me.cayve.ludorium.games.events;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.function.Consumer;
+
+import me.cayve.ludorium.utils.events.Event1;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 
 public class InstanceEventLog {
 	
-	private final ArrayList<InstanceEvent> log = new ArrayList<>();
-	private int processedIndex = 0; //Used to keep track of what instance events the board has processed
+	private Map<Class<? extends InstanceEvent>, Event1<?>> events = new HashMap<>();
+	private final ArrayList<InstanceEvent> unprocessed = new ArrayList<>(),
+											processed = new ArrayList<>();
 	
-	public void logEvent(InstanceEvent newEvent) { log.add(newEvent); }
-	
-	/**
-	 * Retrieves the unprocessed events and marks them as processed
-	 * @return
-	 */
-	public ArrayList<InstanceEvent> getUnprocessed() {
-		ArrayList<InstanceEvent> unprocessed = new ArrayList<>();
-		
-		for (int i = processedIndex; i < log.size(); i++)
-			unprocessed.add(log.get(i));
-		
-		processedIndex = log.size();
-		return unprocessed;
+	public InstanceEventLog(Subscriber<Runnable> dispatcher) {
+		dispatcher.subscribe(this::dispatchUnprocessed);
 	}
 	
-	public ArrayList<InstanceEvent> getFullLog() { return log; }
+	public void logEvent(InstanceEvent newEvent) { unprocessed.add(newEvent); }
+	
+	public ArrayList<InstanceEvent> getFullLog() { return processed; }
+	
+	@SuppressWarnings("unchecked")
+	private void dispatchUnprocessed() {
+		Iterator<InstanceEvent> iterator = unprocessed.iterator();
+		while (iterator.hasNext()) {
+			InstanceEvent next = iterator.next();
+			
+			((Event1<InstanceEvent>)events.get(next.getClass())).accept(next);
+			
+			processed.add(next);
+			iterator.remove();
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <T extends InstanceEvent> Subscriber<Consumer<T>> getSubscriber(Class<T> type) {
+		return ((Event1<T>)events.computeIfAbsent(type, x -> new Event1<T>())).getSubscriber();
+	}
 }

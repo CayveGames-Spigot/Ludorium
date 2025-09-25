@@ -70,7 +70,8 @@ public class SubmitAction extends PlayerAction implements Listener {
 			if (resultType == eResult.BOTH || resultType == eResult.CANCEL)
 				context = context.append(TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]));
 			
-			ToolbarMessage.sendImmediate(player, tsk, TextYml.getText(player, "actions.crouch.hold", Placeholder.component("context", context)))
+			final Component component = TextYml.getText(player, "actions.crouch.hold", Placeholder.component("context", context));
+			ToolbarMessage.sendImmediate(player.getUniqueId().toString(), tsk, v -> component)
 				.clearIfSkipped();
 			
 		}).setRefreshRate(30));
@@ -88,21 +89,24 @@ public class SubmitAction extends PlayerAction implements Listener {
 		{
 			if (submitTask.isComplete())
 				message = message.append(TextYml.getText(player, "actions.crouch.confirmed"))
-					.append(MiniMessage.miniMessage().deserialize(ProgressBar.generate(submitTask.getPercentTimeCompleted(), "[<green>%i%o<reset>]")));
+					.append(MiniMessage.miniMessage().deserialize(ProgressBar.newBuild().format("[<green>%i%o<reset>]")
+							.generate(submitTask.getPercentTimeCompleted())));
 			else
 				message = message.append(TextYml.getText(player, "actions.crouch.confirm"))
-					.append(Component.text(ProgressBar.generate(submitTask.getPercentTimeCompleted())));
+					.append(Component.text(ProgressBar.newBuild().generate(submitTask.getPercentTimeCompleted())));
 		}
 		if (resultType == eResult.BOTH)
-			message = message.append(Component.text(ProgressBar.generate(transitionTask.getPercentTimeCompleted(), 6, " %i %o ")));
+			message = message.append(Component.text(ProgressBar.newBuild().format(" %i %o ").barCount(6)
+					.generate(transitionTask.getPercentTimeCompleted())));
 		if (resultType == eResult.BOTH || resultType == eResult.CANCEL)
 			message = message.append(TextYml.getText(player, "actions.crouch." + cancelContexts[cancelContext.ordinal()]))
-				.append(Component.text(ProgressBar.generate(cancelTask.getPercentTimeCompleted())));
+				.append(Component.text(ProgressBar.newBuild().generate(cancelTask.getPercentTimeCompleted())));
 		
+		final Component component = message;
 		if (messageObject != null)
-			messageObject.updateMessage(message);
+			messageObject.updateMessage(v -> component);
 		else
-			messageObject = ToolbarMessage.clearSourceAndSendImmediate(player, tsk, message).setPermanent().refreshEveryTick().setPriority(1);
+			messageObject = ToolbarMessage.clearSourceAndSendImmediate(player.getUniqueId().toString(), tsk, v -> component).setPermanent().refreshEveryTick().setPriority(1);
 	}
 	
 	@EventHandler

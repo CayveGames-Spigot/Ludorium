@@ -4,7 +4,7 @@ import org.bukkit.Location;
 
 import me.cayve.ludorium.utils.animations.LinearAnimation;
 import me.cayve.ludorium.utils.animations.SinWaveAnimation;
-import me.cayve.ludorium.utils.functionals.Event.Subscription;
+import me.cayve.ludorium.utils.events.Event.Subscription;
 
 public class PathingAnimationRig extends AnimatorRig {
 

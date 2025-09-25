@@ -13,7 +13,7 @@ public abstract class Animation<T> {
 	private boolean loop;
 	private float startTime = 0, endTime = 1;
 	private float speed = 1, duration = 1;
-	private float randomizedOffset = 0;
+	private float offset = 0;
 	
 	/**
 	 * Sets the speed of this animation
@@ -40,7 +40,14 @@ public abstract class Animation<T> {
 	 * Randomizes the where the animation starts in the timeline
 	 * @return
 	 */
-	public Animation<T> randomize() { randomizedOffset = new Random().nextFloat(); return this; }
+	public Animation<T> randomizeOffset() { offset = new Random().nextFloat(); return this; }
+	
+	/**
+	 * Sets where the animation starts in the timeline
+	 * @param offset
+	 * @return
+	 */
+	public Animation<T> setOffset(float offset) { this.offset = offset; return this; }
 	/**
 	 * Sets this animation to be a sub-animation of the base.
 	 * (e.x. Parabola of a sin wave)
@@ -84,7 +91,7 @@ public abstract class Animation<T> {
 		if (speed == 0)
 			return;
 		
-		task = Timer.register(new Task().setRefreshRate(0).setDuration(duration / speed).skip(randomizedOffset)
+		task = Timer.register(new Task().setRefreshRate(0).setDuration(duration / speed).skip(offset)
 				.registerOnUpdate(onUpdate)
 				.registerOnComplete(() -> {
 					if (loop) {

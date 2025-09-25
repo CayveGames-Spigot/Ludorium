@@ -2,5 +2,5 @@ games:
   graceCountdown: 0
   ludo:
     enabled: true
-    diceRollTimeout: 5
+    diceRollTimeout: 15
     selectPieceTimeout: 15

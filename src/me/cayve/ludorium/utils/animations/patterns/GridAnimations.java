@@ -2,6 +2,7 @@ package me.cayve.ludorium.utils.animations.patterns;
 
 import org.joml.Vector2i;
 
+import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.animations.Animator;
@@ -21,7 +22,7 @@ public class GridAnimations {
 	 * @param amplitude Height of the waves (from @SinWaveAnimation)
 	 * @param timeDelay (0-1) (0, faster time between peaks. 1 slower time between peaks) (from @SinWaveAnimation)
 	 */
-	public static void wave(String sourceKey, Grid<Animator> animators, eDirection side, float duration, float overlap, float amplitude, float timeDelay) {
+	public static void wave(SourceKey sourceKey, Grid<Animator> animators, eDirection side, float duration, float overlap, float amplitude, float timeDelay) {
 		Vector2i dV = side.getVector();
 		
 		if (side.isCardinal()) { //Not diagonal

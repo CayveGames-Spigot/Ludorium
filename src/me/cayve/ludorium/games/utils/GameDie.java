@@ -16,9 +16,11 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 
+import me.cayve.ludorium.games.utils.PlayerInventoryManager.InventoryState;
 import me.cayve.ludorium.main.LudoriumPlugin;
 import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.Rigidbody;
+import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.entities.ItemEntity;
 
 /**
@@ -34,7 +36,7 @@ public class GameDie implements Listener {
 
 	private static final String MODEL_ID = "dice";
 	private static final float RAN_VEL_RANGE = .25f;
-	private String gameKey;
+	private SourceKey gameKey;
 	private int diceCount;
 	
 	private String currentPlayer;
@@ -43,7 +45,7 @@ public class GameDie implements Listener {
 	
 	private ArrayList<ItemEntity> activeRolls = new ArrayList<>();
 	
-	public GameDie(String gameKey, int diceCount) {
+	public GameDie(SourceKey gameKey, int diceCount) {
 		this.gameKey = gameKey;
 		this.diceCount = diceCount;
 		
@@ -67,8 +69,8 @@ public class GameDie implements Listener {
 		this.rollCallback = callback;
 		this.currentDiceCount = overrideDiceCount;
 
-		PlayerStateManager.getGameState(playerID, gameKey).addItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
-		PlayerStateManager.refreshPlayer(playerID);
+		PlayerProfileManager.getPlayerProfile(playerID).getComponentOfTypeFrom(InventoryState.class, gameKey)
+			.addItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
 	}
 	
 	public void forceRoll() {
@@ -102,8 +104,8 @@ public class GameDie implements Listener {
 	private void removeItemFromPlayer() {
 		if (currentPlayer == null) return;
 		
-		PlayerStateManager.getGameState(currentPlayer, gameKey).removeItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
-		PlayerStateManager.refreshPlayer(currentPlayer);
+		PlayerProfileManager.getPlayerProfile(currentPlayer).getComponentOfTypeFrom(InventoryState.class, gameKey)
+			.removeItem(CustomModel.get(MODEL_ID).asQuantity(currentDiceCount));
 	}
 	
 	private void attemptRollCalculation(boolean waitForRest) {
@@ -117,7 +119,7 @@ public class GameDie implements Listener {
 		Integer[] results = new Integer[currentDiceCount];
 		
 		for (int i = 0; i < currentDiceCount; i++)
-			results[i] = 6;//new Random().nextInt(6) + 1;
+			results[i] = new Random().nextInt(6) + 1;
 		
 		//Reset the current roll and submit the results
 		removeItemFromPlayer();
@@ -136,6 +138,7 @@ public class GameDie implements Listener {
 			return;
 		
 		dropDice(event.getItemDrop());
+		event.setCancelled(false); //Override lower priorities
 	}
 	
 	private void dropDice(Item item) {
@@ -143,10 +146,9 @@ public class GameDie implements Listener {
 		
 		for (int i = 0; i < currentDiceCount; i++) {
 			ItemEntity itemDisplay = new ItemEntity(item.getLocation(), CustomModel.get(MODEL_ID),
-					entity -> new Collider(entity.getDisplayTransform(), new Vector2f(.4f, .4f)),
-					entity -> new Rigidbody(entity.getDisplayTransform(), entity.getComponent(Collider.class)));
+					entity -> new Collider(entity.getPositionTransform(), new Vector2f(.4f, .4f)),
+					entity -> new Rigidbody(entity.getPositionTransform(), entity.getComponent(Collider.class)));
 
-			itemDisplay.setPivot(new Vector3f(0,0,0));
 			Rigidbody rb = itemDisplay.getComponent(Rigidbody.class);
 			
 			Vector3f velocity = item.getVelocity().toVector3f();

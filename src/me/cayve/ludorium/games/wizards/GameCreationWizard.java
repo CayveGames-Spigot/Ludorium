@@ -1,7 +1,6 @@
 package me.cayve.ludorium.games.wizards;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,13 +10,13 @@ import org.bukkit.event.player.PlayerQuitEvent;
 
 import me.cayve.ludorium.actions.PlayerAction;
 import me.cayve.ludorium.main.LudoriumPlugin;
+import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.StateMachine;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
 import me.cayve.ludorium.ymls.TextYml;
-import net.kyori.adventure.text.Component;
 
 public abstract class GameCreationWizard implements Listener {
 	
@@ -26,10 +25,9 @@ public abstract class GameCreationWizard implements Listener {
 	protected StateMachine stateMachine;
 	
 	protected PlayerAction currentAction;
-	protected Player player;
+	protected Player player; //Type Player because they're required to be online
 	protected String instanceName;
-	protected String tsk = UUID.randomUUID().toString(); //ToolbarMessage source key
-	protected String stateTsk = UUID.randomUUID().toString(); //Tsk specifically for state messages
+	protected SourceKey sourceKey = new SourceKey(); //ToolbarMessage source key
 	
 	protected PlayerAction delayedAction; //If onComplete should be delayed, cache the action that was completed
 	protected Task onCompleteDelay;
@@ -47,13 +45,13 @@ public abstract class GameCreationWizard implements Listener {
 	 * Acts as constructor for pre-activation
 	 * 
 	 * @param instanceName the name of the game instance
-	 * @param wizard the player creating the game instance
+	 * @param playerID the player creating the game instance
 	 * @return self, to allow for argument chaining
 	 */
-	public GameCreationWizard apply(String instanceName, Player wizard) {
+	public GameCreationWizard apply(String instanceName, Player player) {
 		if (stateMachine.hasStarted()) return this;
 		
-		this.player = wizard;
+		this.player = player;
 		this.instanceName = instanceName;
 		
 		return this;
@@ -65,7 +63,7 @@ public abstract class GameCreationWizard implements Listener {
 			return false;
 		
 		for (GameCreationWizard wizard : activeWizards)
-			if (wizard.player.getUniqueId().equals(player.getUniqueId()))
+			if (wizard.player.getUniqueId().toString().equals(player.getUniqueId().toString()))
 				return true;
 		return false;
 	}
@@ -84,9 +82,8 @@ public abstract class GameCreationWizard implements Listener {
 	public void destroy() {
 		activeWizards.remove(this);
 
-		Timer.cancelAllWithKey(tsk);
-		ToolbarMessage.clearAllFromSource(tsk);
-		ToolbarMessage.clearAllFromSource(stateTsk);
+		Timer.cancelAllWithKey(sourceKey);
+		ToolbarMessage.clearAllFromSource(sourceKey);
 		
 		if (currentAction != null)
 			currentAction.destroy();
@@ -106,7 +103,7 @@ public abstract class GameCreationWizard implements Listener {
 	public void activateWizard() {
 		if (stateMachine.hasStarted() || player == null) return;
 		
-		ToolbarMessage.clearSourceAndSend(player, tsk, TextYml.getText(player, "wizards.started"))
+		ToolbarMessage.clearSourceAndSendQueue(player.getUniqueId().toString(), sourceKey, x -> TextYml.getText(x, "wizards.started"))
 			.setType(eType.SUCCESS).setDuration(2).clearIfSkipped();
 		
 		stateMachine.next();
@@ -148,27 +145,24 @@ public abstract class GameCreationWizard implements Listener {
 		if (onCompleteDelay != null)
 			onCompleteDelay.cancel();
 		
-		onCompleteDelay = new Task(tsk).registerOnComplete(() -> onCompletedAction(delayedAction)).setDuration(delay).pause();
+		onCompleteDelay = new Task(sourceKey).registerOnComplete(() -> onCompletedAction(delayedAction)).setDuration(delay).pause();
 		Timer.register(onCompleteDelay);
 	}
 	
 	//Quit the wizard if the player leaves
 	@EventHandler
 	private void onPlayerLeave(PlayerQuitEvent event) {
-		if (player.getUniqueId().equals(event.getPlayer().getUniqueId()))
+		if (player.getUniqueId().toString().equals(event.getPlayer().getUniqueId().toString()))
 			cancelWizard();
 	}
 	
-	protected void cancelWizard(Component customMessage) {
-		ToolbarMessage.sendImmediate(player, customMessage).setType(eType.ERROR);
-		destroy();
-	}
 	protected void cancelWizard() {
-		cancelWizard(TextYml.getText(player, "wizards.canceled"));
+		ToolbarMessage.sendImmediate(player.getUniqueId().toString(), x -> TextYml.getText(x, "wizards.canceled")).setType(eType.ERROR);
+		destroy();
 	}
 	
 	protected void completeWizard() {
-		ToolbarMessage.sendImmediate(player, TextYml.getText(player, "wizards.completed")).setType(eType.SUCCESS);
+		ToolbarMessage.sendImmediate(player.getUniqueId().toString(), x -> TextYml.getText(x, "wizards.completed")).setType(eType.SUCCESS);
 		destroy();
 	}
 }

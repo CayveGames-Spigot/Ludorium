@@ -14,15 +14,19 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import me.cayve.ludorium.games.utils.PlayerStateManager;
+import me.cayve.ludorium.games.utils.PlayerInventoryManager.InventoryState;
+import me.cayve.ludorium.games.utils.PlayerProfileManager;
 import me.cayve.ludorium.main.LudoriumPlugin;
+import me.cayve.ludorium.utils.MessengerProfile;
+import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
+import me.cayve.ludorium.utils.ToolbarMessage.Message;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
-import me.cayve.ludorium.utils.functionals.Event0;
-import me.cayve.ludorium.utils.functionals.Event1;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event1;
 import me.cayve.ludorium.ymls.TextYml;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -41,7 +45,10 @@ public abstract class GameLobby implements Listener {
 	protected static int COUNTDOWN_DURATION = 5;
 	protected static int JOIN_LEAVE_PROMPT_DURATION = 1;
 	
-	protected String lobbyKey = UUID.randomUUID().toString();
+	protected SourceKey lobbyKey = new SourceKey();
+	
+	protected final MessengerProfile messenger = new MessengerProfile(lobbyKey);
+	
 	private boolean isEnabled;
 	
 	private BiFunction<Integer, Player, Component> positionLabelFunc;
@@ -51,19 +58,14 @@ public abstract class GameLobby implements Listener {
 	
 	private int minimum, maximum, playerCount; //Max and min player count
 	
-	private boolean storeInventory = false, forceInventoryState;
+	private boolean storeInventory, forceInventoryState;
 	
-	private Event1<Integer> lobbyJoinEvent = new Event1<>();
-	private Event1<Integer> lobbyLeaveEvent = new Event1<>();
+	private final Event1<Integer> lobbyJoinEvent = new Event1<>();
+	private final Event1<Integer> lobbyLeaveEvent = new Event1<>();
 	
-	private Event0 shutdownEvent = new Event0(); //Called when the lobby is shutdown after running
-	private Event0 countdownCompleteEvent = new Event0();
-	
-	public Subscriber<Consumer<Integer>> onLobbyJoin = lobbyJoinEvent.getSubscriber(),
-										onLobbyLeave = lobbyLeaveEvent.getSubscriber();
-	public Subscriber<Runnable> onShutdown = shutdownEvent.getSubscriber(),
-								onCountdownComplete = countdownCompleteEvent.getSubscriber();
-	
+	private final Event0 shutdownEvent = new Event0(); //Called when the lobby is shutdown after running
+	private final Event0 countdownCompleteEvent = new Event0();
+
 	private Task countdown;
 	
 	/**
@@ -75,7 +77,7 @@ public abstract class GameLobby implements Listener {
 		this.minimum = minimum;
 		this.maximum = maximum;
 		players = new String[maximum];
-		
+
 		registerEvents();
 	}
 	
@@ -95,7 +97,8 @@ public abstract class GameLobby implements Listener {
 		this.storeInventory = true;
 		this.forceInventoryState = forceInventoryState;
 	}
-	
+
+	public MessengerProfile getMessenger() { return messenger; }
 	/**
 	 * Registers the function to generate the label for a given position to be viewed by a given player when needed
 	 * @param labelFunc
@@ -111,17 +114,17 @@ public abstract class GameLobby implements Listener {
 	private void registerEvents() {
 		LudoriumPlugin.registerEvent(this);
 		
-		onCountdownComplete.subscribe(this::disable);
+		onCountdownComplete().subscribe(this::disable, 1);
 		
 		Timer.register(countdown = new Task(lobbyKey).setDuration(COUNTDOWN_DURATION).setRefreshRate(1)
 				.registerOnUpdate(() -> {
-					forEachOnlinePlayer((player) -> {
-						ToolbarMessage.sendImmediate(player, lobbyKey + "-countdown", 
-								TextYml.getText(player, "in-game.startsIn", 
+					messenger.sendAll("countdown", ToolbarMessage::sendImmediate, 
+							new Message(v -> TextYml.getText(v, "in-game.startsIn", 
 										Placeholder.parsed("duration", countdown.getWholeSecondsLeft() + "")))
-						.clearIfSkipped().setMuted();
-						player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 1);
-					});
+							.setPriority(-1).clearIfSkipped().setMuted());
+					
+					forEachOnlinePlayer(p -> p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_XYLOPHONE, 1, 1));
+					
 				}).registerOnComplete(countdownCompleteEvent).pause().refreshOnStart());
 	}
 	/**
@@ -136,6 +139,8 @@ public abstract class GameLobby implements Listener {
 	 */
 	public void disable() {
 		isEnabled = false;
+		
+		messenger.clear();
 	}
 	/**
 	 * @return Whether the lobby is enabled for joining
@@ -147,13 +152,13 @@ public abstract class GameLobby implements Listener {
 			return;
 		
 		countdown.restart();
-		ToolbarMessage.clearAllFromSource(lobbyKey + "-waiting");
+		messenger.clearContext("waiting");
 	}
 	
 	protected void onMaximumReached() {}
 	protected void onMinimumReached() 
 	{
-		ToolbarMessage.clearAllFromSource(lobbyKey + "-waiting");
+		messenger.clearContext("waiting");
 	}
 	protected void onMinimumLost() {
 		if (!isEnabled()) //If the game is running and the minimum player count is lost, shut down the lobby
@@ -162,9 +167,8 @@ public abstract class GameLobby implements Listener {
 		{
 			countdown.pause();
 			
-			ToolbarMessage.clearAllFromSource(lobbyKey + "-countdown");
-			forEachOnlinePlayer(player -> ToolbarMessage.sendQueue(player, lobbyKey + "-waiting", 
-					TextYml.getText(player, "in-game.waiting")).setPermanent());
+			messenger.clearContext("countdown");
+			messenger.sendAll("waiting", ToolbarMessage::sendQueue, new Message(v -> TextYml.getText(v, "in-game.waiting")).setPermanent());
 		}
 	}
 	
@@ -189,11 +193,13 @@ public abstract class GameLobby implements Listener {
 		
 		Player player = getOnlinePlayer(playerID);
 		
-		ToolbarMessage.sendImmediate(player, lobbyKey, TextYml.getText(player, "in-game.joined"))
-			.setType(eType.SUCCESS).clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION);
+		PlayerProfileManager.getPlayerProfile(playerID).addProfileComponent(lobbyKey, messenger);
 		
-		ToolbarMessage.sendQueue(player, lobbyKey + "-waiting", TextYml.getText(player, "in-game.waiting")).setPermanent();
+		messenger.sendAll(ToolbarMessage::sendImmediate, new Message(v -> TextYml.getText(player, "in-game.joined"))
+				.setType(eType.SUCCESS).clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
 		
+		messenger.sendAll("waiting", ToolbarMessage::sendQueue, new Message(v -> TextYml.getText(player, "in-game.waiting")).setPermanent());
+
 		promptJoinLeave("in-game.otherJoined", lobbyPosition, player);
 		
 		players[lobbyPosition] = playerID;
@@ -204,7 +210,7 @@ public abstract class GameLobby implements Listener {
 			host = playerID;
 		
 		if (storeInventory)
-			PlayerStateManager.createProfile(player, lobbyKey, forceInventoryState);
+			PlayerProfileManager.getPlayerProfile(playerID).addProfileComponent(lobbyKey, new InventoryState(!forceInventoryState));
 		
 		//If maximum and minimum are the same amount, only maximum is triggered
 		if (playerCount == maximum)
@@ -236,14 +242,12 @@ public abstract class GameLobby implements Listener {
 		OfflinePlayer player = getOfflinePlayer(playerID);
 		
 		if (player.isOnline())
-			ToolbarMessage.clearSourceAndSendImmediate(player.getPlayer(), lobbyKey, 
-					TextYml.getText(player.getPlayer(), "in-game.left")).setType(eType.ERROR).clearIfSkipped();
+			messenger.sendAll(ToolbarMessage::clearSourceAndSendImmediate, 
+					new Message(v -> TextYml.getText(player.getPlayer(), "in-game.left")).setType(eType.ERROR).clearIfSkipped());
 		
 		promptJoinLeave("in-game.otherLeft", lobbyPosition, player);
 					
-		//Restore the player's inventory
-		if (storeInventory)
-			PlayerStateManager.removeGameState(playerID, lobbyKey);
+		PlayerProfileManager.getPlayerProfile(playerID).removeProfile(lobbyKey);
 		
 		//Check if minimum player count has been lost
 		if (playerCount == minimum - 1)
@@ -251,18 +255,19 @@ public abstract class GameLobby implements Listener {
 	}
 	
 	private void promptJoinLeave(String messagePath, int lobbyPosition, OfflinePlayer player) {
-		forEachOnlinePlayer(x -> ToolbarMessage.sendImmediate(x, lobbyKey, 
-					TextYml.getText(x, messagePath, 
-						Placeholder.component(
-							"label", (getPositionLabel(lobbyPosition, x) == null ? Component.empty() :
-							Component.text(" (")
-							.append(getPositionLabel(lobbyPosition, x))
-							.append(Component.text(")")))
-						),
-						Placeholder.component("player", player.isOnline() ? player.getPlayer().displayName() : Component.text(player.getName()))
-					)
-				)				
-				.clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
+		messenger.sendAll(ToolbarMessage::sendImmediate, new Message(v ->
+			TextYml.getText(v, messagePath, 
+					Placeholder.component(
+						"label", (getPositionLabel(lobbyPosition, v) == null ? Component.empty() :
+						Component.text(" (")
+						.append(getPositionLabel(lobbyPosition, v))
+						.append(Component.text(")")))
+					),
+					Placeholder.component("player", player.isOnline() ? player.getPlayer().displayName() : Component.text(player.getName()))
+				)
+			)				
+			.clearIfSkipped().setPriority(1).setDuration(JOIN_LEAVE_PROMPT_DURATION));
+
 	}
 	
 	public int getPlayerMax() { return maximum; }
@@ -270,7 +275,7 @@ public abstract class GameLobby implements Listener {
 	public int getPlayerCount() { return playerCount; }
 	public String getPlayerAt(int lobbyPosition) { return players[lobbyPosition]; }
 	public String getHost() { return host; }
-	public String getLobbyKey() { return lobbyKey; }
+	public SourceKey getLobbyKey() { return lobbyKey; }
 	
 	/**
 	 * @return A sorted array of all lobby positions that players are occupying
@@ -317,8 +322,7 @@ public abstract class GameLobby implements Listener {
 		
 		HandlerList.unregisterAll(this);
 		
-		if (storeInventory)
-			forEachPlayer(x -> PlayerStateManager.removeGameState(x, lobbyKey));
+		forEachPlayer(x -> PlayerProfileManager.getPlayerProfile(x).removeProfile(lobbyKey));
 	}
 	
 	public void forEachOnlinePlayer(Consumer<Player> action) {
@@ -353,4 +357,9 @@ public abstract class GameLobby implements Listener {
 		if (hasPlayer(event.getPlayer().getUniqueId().toString()) && isEnabled())
 			attemptLobbyLeave(event.getPlayer().getUniqueId().toString());
 	}
+
+	public Subscriber<Consumer<Integer>> onLobbyJoin() { return lobbyJoinEvent.getSubscriber(); }
+	public Subscriber<Consumer<Integer>> onLobbyLeave() { return lobbyLeaveEvent.getSubscriber(); }
+	public Subscriber<Runnable> onShutdown() { return shutdownEvent.getSubscriber(); }
+	public Subscriber<Runnable> onCountdownComplete() { return countdownCompleteEvent.getSubscriber(); }
 }

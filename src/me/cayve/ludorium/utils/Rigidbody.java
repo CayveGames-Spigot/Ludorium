@@ -5,8 +5,8 @@ import org.joml.Vector3f;
 
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.entities.DisplayEntity.EntityComponent;
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
-import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 import me.cayve.ludorium.utils.interfaces.Destroyable;
 import me.cayve.ludorium.utils.interfaces.Toggleable;
 import me.cayve.ludorium.utils.locational.Transform;

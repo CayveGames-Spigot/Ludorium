@@ -4,6 +4,10 @@ public class LinearAnimation extends Animation<Float> {
 
 	private float start, finish;
 	
+	public LinearAnimation() {
+		this.start = 0;
+		this.finish = 1;
+	}
 	public LinearAnimation(float start, float finish) {
 		this.start = start;
 		this.finish = finish;

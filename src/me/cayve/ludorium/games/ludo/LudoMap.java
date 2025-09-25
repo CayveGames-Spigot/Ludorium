@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.bukkit.Location;
 import org.bukkit.util.Vector;
+import org.joml.Vector3f;
 
 import me.cayve.ludorium.utils.locational.LocationUtil;
 import me.cayve.ludorium.utils.locational.Region;
@@ -24,8 +25,9 @@ import me.cayve.ludorium.utils.locational.Region;
  */
 public class LudoMap {
 
-	private static int 	HOME_TILE_COUNT = 4,
+	private static final int 	HOME_TILE_COUNT = 4,
 						STARTER_TILE_COUNT = 4;
+	private static final Vector3f TOKEN_OFFSET = new Vector3f(0.5f, 1, 0.5f);
 	
 	private String mapID;
 
@@ -66,7 +68,7 @@ public class LudoMap {
 		//Determines relative location for all starter positions
 		for (int i = 0; i < starters.size(); i++) {
 			float length = starters.get(i).getXLength() / 4f; //Centers the 4 pieces halfway between the center and the edge
-			Location center = starters.get(i).getCenter();
+			Location center = starters.get(i).getCenter(false);
 
 			//Calculates all relative corners of the starter region
 			relativeLocations[getStarterIndex(i, 0)] = calculateRelativity(origin, 
@@ -105,13 +107,22 @@ public class LudoMap {
 	}
 	
 	public Location getStarterCenter(Location origin, int color) {
-		return new Region(
-				getWorldLocation(origin, getStarterIndex(color, 0)), 
-				getWorldLocation(origin, getStarterIndex(color, 3)), false).getCenter();
+		Location location = new Region(
+				getWorldLocation(origin, getStarterIndex(color, 0), true), 
+				getWorldLocation(origin, getStarterIndex(color, 3), true), false).getCenter(false);
+		return location;
 	}
 	
-	public Location getWorldLocation(Location origin, int index) {
-		return LocationUtil.relativeLocation(origin, relativeLocations[index]);
+	public Location getWorldLocation(Location origin, int index, boolean asTokenLocation) {
+		//Force the offset to only be y if the requested index is a starter (starters are final locations)
+		boolean onlyY = asTokenLocation && index >= getStarterIndex(0, 0) && index <= getStarterIndex(3, 3);
+
+		Location location = LocationUtil.relativeLocation(origin, relativeLocations[index]);
+		if (asTokenLocation && !onlyY)
+			location.add(Vector.fromJOML(TOKEN_OFFSET));
+		else if (asTokenLocation && onlyY)
+			location.add(0, TOKEN_OFFSET.y, 0);
+		return location;
 	}
 	
 	public boolean isSafeSpace(int index) {
@@ -127,11 +138,17 @@ public class LudoMap {
 	public int getStartTile(int colorIndex) { return (tileCount / getColorCount()) * colorIndex; }
 	public int getEndTile(int colorIndex) { return Math.floorMod(getStartTile(colorIndex) - 1, tileCount); }
 	
-	public Location[] mapFromOrigin(Location origin) {
+	/**
+	 * 
+	 * @param origin
+	 * @param asTokenLocation False - returns the raw block location. True - adjusts location so token sits on top of the block in the center
+	 * @return
+	 */
+	public Location[] mapFromOrigin(Location origin, boolean asTokenLocation) {
 		Location[] locations = new Location[getMapSize()];
 		
 		for (int i = 0; i < getMapSize(); i++)
-			locations[i] = getWorldLocation(origin, i);
+			locations[i] = getWorldLocation(origin, i, asTokenLocation);
 		
 		return locations;
 	}

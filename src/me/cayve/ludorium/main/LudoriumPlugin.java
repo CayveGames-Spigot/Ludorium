@@ -9,7 +9,7 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.cayve.ludorium.commands.LudoriumCommand;
 import me.cayve.ludorium.games.GameRegistrar;
 import me.cayve.ludorium.games.boards.BoardList;
-import me.cayve.ludorium.games.utils.PlayerStateManager;
+import me.cayve.ludorium.games.utils.PlayerInventoryManager;
 import me.cayve.ludorium.games.wizards.GameCreationWizard;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.ToolbarMessage;
@@ -69,10 +69,10 @@ public class LudoriumPlugin extends JavaPlugin {
 		LudoriumEntity.initialize();
 		Timer.initialize();
 		ToolbarMessage.initialize();
-		PlayerStateManager.initialize();
+		PlayerInventoryManager.initialize();
 		
 		//Each game type is guarded as well, per instance is up to type implementation
-		callSafely(() -> GameRegistrar.forEachGame(x -> x.load())); 
+		callSafely(() -> GameRegistrar.forEachGame(x -> x.load()));
 	}
 	
 	public void reloadPlugin() 
@@ -88,7 +88,7 @@ public class LudoriumPlugin extends JavaPlugin {
 		callSafely(GameCreationWizard::destroyAll);
 		callSafely(BoardList::removeAll); //Each board removal is guarded as well
 
-		callSafely(PlayerStateManager::uninitialize); //Each player state removal is guarded as well
+		callSafely(PlayerInventoryManager::uninitialize); //Each player state removal is guarded as well
 		callSafely(LudoriumEntity::uninitialize);
 	}
 }

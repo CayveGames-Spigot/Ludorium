@@ -1,4 +1,4 @@
-package me.cayve.ludorium.utils.functionals;
+package me.cayve.ludorium.utils.events;
 
 import java.util.function.Consumer;
 

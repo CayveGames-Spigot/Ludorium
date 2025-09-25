@@ -23,7 +23,7 @@ public class BoardList {
 	
 	public static boolean remove(String name, Class<? extends GameBoard> type) {
 		for (GameBoard board : activeBoards) {
-			if (board.getClass().equals(type) && board.getName().equals(name))
+			if (board.getClass().isAssignableFrom(type) && board.getName().equals(name))
 				return remove(board);
 		}
 		return false;
@@ -48,7 +48,7 @@ public class BoardList {
 	
 	public static void forEachOfType(Class<? extends GameBoard> type, Consumer<GameBoard> action) {
 		forEach(x -> {
-			if (x.getClass().equals(type))
+			if (x.getClass().isAssignableFrom(type))
 				action.accept(x);
 		});
 	}

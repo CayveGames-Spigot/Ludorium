@@ -2,12 +2,11 @@ package me.cayve.ludorium.utils;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.UUID;
 
 import org.bukkit.scheduler.BukkitRunnable;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
-import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.events.Event0;
 
 public class Timer {
 
@@ -15,6 +14,8 @@ public class Timer {
 		private Event0 onComplete = new Event0();
 		private Event0 onUpdate = new Event0();
 		private Event0 onCanceled = new Event0();
+		
+		private int priority = 0;
 		
 		private long duration = -1;
 		private long refreshRate = -1;
@@ -27,10 +28,12 @@ public class Timer {
 		private boolean isCanceled;
 		private boolean refreshOnStart;
 		
-		private String sourceKey;
+		private SourceKey sourceKey;
 		
-		public Task() { this.sourceKey = UUID.randomUUID().toString(); }
-		public Task(String sourceKey) { this.sourceKey = sourceKey; }
+		public Task() { this.sourceKey = new SourceKey(); }
+		public Task(SourceKey sourceKey) { this.sourceKey = sourceKey; }
+		
+		public Task setPriority(int priority) { this.priority = priority; return this; }
 		
 		public Task skip(long ticks) {
 			timeUntilCompletion -= ticks;
@@ -161,6 +164,8 @@ public class Timer {
 					tasks.add(task);
 				toBeAdded.clear();
 				
+				tasks.sort((x, y) -> Integer.compare(y.priority, x.priority));
+				
 				Iterator<Task> taskIterator = tasks.iterator();
 				while (taskIterator.hasNext()) {
 					Task task = taskIterator.next();
@@ -179,7 +184,7 @@ public class Timer {
 			task.cancel();
 	}
 	
-	public static void cancelAllWithKey(String sourceKey) {
+	public static void cancelAllWithKey(SourceKey sourceKey) {
 		for (Task task : tasks)
 			if (task.sourceKey.equals(sourceKey))
 				task.cancel();

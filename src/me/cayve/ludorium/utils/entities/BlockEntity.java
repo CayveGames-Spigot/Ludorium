@@ -32,14 +32,14 @@ public class BlockEntity extends DisplayEntity<BlockDisplay> {
 		
 		construct(BlockDisplay.class, location, displayID, componentFactory);
 		
-		originTransform.onUpdated().subscribe(this::setLightLevel);
+		position.onUpdated().subscribe(this::setLightLevel);
 	}
 	
 	/**
 	 * Sets the default light level to that of the block above
 	 */
 	private void setLightLevel() {
-		Location blockAbove = LocationUtil.relativeLocation(originTransform.getLocation(), 0, 1, 0);
+		Location blockAbove = LocationUtil.relativeLocation(position.getLocation(), 0, 1, 0);
 		setLightLevel(Math.max(blockAbove.getBlock().getLightFromBlocks(), blockAbove.getBlock().getLightFromSky()));
 	}
 	

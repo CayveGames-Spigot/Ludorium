@@ -4,15 +4,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import me.cayve.ludorium.utils.animations.rigs.AnimatorRig;
 import me.cayve.ludorium.utils.entities.DisplayEntity.EntityComponent;
-import me.cayve.ludorium.utils.functionals.Event.Subscriber;
-import me.cayve.ludorium.utils.functionals.Event0;
+import me.cayve.ludorium.utils.events.Event0;
+import me.cayve.ludorium.utils.events.Event.Subscriber;
 import me.cayve.ludorium.utils.interfaces.Cancelable;
 import me.cayve.ludorium.utils.interfaces.Destroyable;
 import me.cayve.ludorium.utils.locational.Transform;
 
 public class Animator implements EntityComponent, Destroyable, Cancelable {
 	
-	private Transform originTransform, referenceTransform;
+	private Transform position;
 	
 	private Event0 onCompleteEvent = new Event0();
 	private Event0 onCancelEvent = new Event0();
@@ -22,26 +22,23 @@ public class Animator implements EntityComponent, Destroyable, Cancelable {
 	private CopyOnWriteArrayList<AnimatorRig> rigs = new CopyOnWriteArrayList<>();
 	
 	/**
-	 * Animations work around an origin point, the reference is the actual position that will change
-	 * @param originTransform
-	 * @param referenceTransform
+	 * Animator will apply animations to the offset of the transform
+	 * @param positionTransform
 	 */
-	public Animator(Transform originTransform, Transform referenceTransform) {
-		this.originTransform = originTransform;
-		this.referenceTransform = referenceTransform;
+	public Animator(Transform positionTransform) {
+		this.position = positionTransform;
 		
 		play(defaultRig);
 		rigs.remove(defaultRig);
 	}
 	
 	private void update() {
-		Transform offset = new Transform();
-		
-		offset.set(originTransform);
-		
+		Transform offset = new Transform(true);
+			
+		offset.add(defaultRig.evaluate());
 		rigs.forEach(x -> offset.add(x.evaluate()));
 		
-		referenceTransform.set(offset);
+		position.setOffset(offset);
 	}
 	
 	private boolean isAnyRigAnimating() {
@@ -94,7 +91,7 @@ public class Animator implements EntityComponent, Destroyable, Cancelable {
 		
 		onCancelEvent.run();
 		
-		referenceTransform.set(originTransform);
+		position.resetOffsets();
 	}
 	
 	@Override

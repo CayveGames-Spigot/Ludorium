@@ -63,7 +63,7 @@ public class LudoriumEntity implements Listener {
 			while (entityIterator.hasNext()) {
 				Entity entity = entityIterator.next();
 				if (entity.getPersistentDataContainer().has(pluginKey) && !entities.contains(entity))
-					entityIterator.remove();
+					entity.remove();
 			}
 		}
 	}

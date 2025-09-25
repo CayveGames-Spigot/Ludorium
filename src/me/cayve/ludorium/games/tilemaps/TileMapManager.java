@@ -1,4 +1,4 @@
-package me.cayve.ludorium.games.boards;
+package me.cayve.ludorium.games.tilemaps;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;

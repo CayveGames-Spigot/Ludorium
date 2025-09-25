@@ -50,8 +50,8 @@ public class Region {
 		return grid;
 	}
 	
-	public Location getCenter() {
-		return LocationUtil.relativeLocation(minimum, xLength/2f, yLength/2f, zLength/2f);
+	public Location getCenter(boolean centerY) {
+		return LocationUtil.relativeLocation(minimum, xLength/2f, centerY ? yLength/2f : 0, zLength/2f);
 	}
 	
 	/**
@@ -60,7 +60,7 @@ public class Region {
 	 * @return
 	 */
 	public eDirection relativeDirection(Location location) {
-		Location center = getCenter();
+		Location center = getCenter(false);
 
 		return eDirection.fromVector(
 				new Vector2i(

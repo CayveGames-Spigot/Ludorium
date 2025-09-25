@@ -85,8 +85,8 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 				!event.getPlayer().getUniqueId().equals(player.getUniqueId())) return;
 		
 		if (selectedBlocks.contains(event.getClickedBlock()) && !allowSame) {
-			ToolbarMessage.clearSourceAndSendImmediate(player, tsk, 
-					TextYml.getText(player, "actions.selectBlocks.sameBlock")).setType(eType.ERROR);
+			ToolbarMessage.clearSourceAndSendImmediate(player.getUniqueId().toString(), tsk, 
+					v -> TextYml.getText(v, "actions.selectBlocks.sameBlock")).setType(eType.ERROR);
 			return;
 		}
 		
@@ -117,7 +117,7 @@ public class SelectBlocksAction extends PlayerAction implements Listener {
 		if (!animateSelection && !animateCompletion) return;
 		
 		BlockEntity newAnimation = new BlockEntity(block.getLocation(), block.getBlockData(),
-				entity -> new Animator(entity.getOriginTransform(), entity.getDisplayTransform()));
+				entity -> new Animator(entity.getPositionTransform()));
 		
 		activeAnimations.add(newAnimation);
 		

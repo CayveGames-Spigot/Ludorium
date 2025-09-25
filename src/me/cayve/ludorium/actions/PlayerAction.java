@@ -1,6 +1,5 @@
 package me.cayve.ludorium.actions;
 
-import java.util.UUID;
 import java.util.function.Consumer;
 
 import org.bukkit.entity.Player;
@@ -8,8 +7,9 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 
 import me.cayve.ludorium.main.LudoriumPlugin;
-import me.cayve.ludorium.utils.Timer.Task;
+import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.Timer;
+import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
 
 public abstract class PlayerAction {
@@ -17,7 +17,7 @@ public abstract class PlayerAction {
 	protected Consumer<PlayerAction> successCallback;
 	protected Consumer<PlayerAction> failureCallback;
 	protected Player player;
-	protected String tsk = UUID.randomUUID().toString(); //ToolbarMessage source key
+	protected SourceKey tsk = new SourceKey(); //ToolbarMessage source key
 	
 	protected boolean isComplete = false;
 	private Task publishDelay;

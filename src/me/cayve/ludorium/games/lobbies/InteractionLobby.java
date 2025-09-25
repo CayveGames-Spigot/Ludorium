@@ -7,6 +7,7 @@ import me.cayve.ludorium.utils.Config;
 import me.cayve.ludorium.utils.Timer;
 import me.cayve.ludorium.utils.Timer.Task;
 import me.cayve.ludorium.utils.ToolbarMessage;
+import me.cayve.ludorium.utils.ToolbarMessage.Message;
 import me.cayve.ludorium.utils.ToolbarMessage.Message.eType;
 import me.cayve.ludorium.utils.animations.Animator;
 import me.cayve.ludorium.utils.animations.rigs.HoverAnimationRig;
@@ -59,9 +60,9 @@ public class InteractionLobby extends GameLobby {
 	}
 	
 	private void registerEvents() {
-		onLobbyJoin.subscribe((index) -> displays.get(index).getComponent(Animator.class).cancel());
+		onLobbyJoin().subscribe((index) -> displays.get(index).getComponent(Animator.class).cancel());
 		
-		onLobbyLeave.subscribe((index) -> displays.get(index).getComponent(Animator.class).play(new HoverAnimationRig()));
+		onLobbyLeave().subscribe((index) -> displays.get(index).getComponent(Animator.class).play(new HoverAnimationRig()));
 		
 		Timer.register(graceCountdown = new Task(lobbyKey)
 				.setDuration(Config.getInteger("games.graceCountdown") - COUNTDOWN_DURATION).setRefreshRate(.1f)
@@ -72,26 +73,26 @@ public class InteractionLobby extends GameLobby {
 					if (skipCount == getPlayerCount()) {
 						graceCountdown.pause();
 						
-						forEachOnlinePlayer(player -> ToolbarMessage.sendImmediate(player, lobbyKey + "-interation", 
-								TextYml.getText(player, "in-game.skipped")).setType(eType.ERROR).setDuration(1).setPriority(1).setType(eType.ERROR));
+						messenger.sendAll("interaction", ToolbarMessage::sendImmediate, new Message(v -> 
+							TextYml.getText(v, "in-game.skipped")).setType(eType.ERROR).setDuration(1).setPriority(1).setType(eType.ERROR));
 						
 						startCountdown();
 						return;
 					}
 					
-					forEachOnlinePlayer(player -> 
-						ToolbarMessage.sendImmediate(player, lobbyKey + "-interation", 
+					messenger.sendAll("interaction", ToolbarMessage::sendImmediate, new Message(v ->
 							//The game starts in...
-							TextYml.getText(player, "in-game.startsIn",
+							TextYml.getText(v, "in-game.startsIn",
 								Placeholder.parsed("duration", (graceCountdown.getWholeSecondsLeft() + COUNTDOWN_DURATION) + ""))
 							//(Crouch to skip 1/4)
 							.append(skipCount <= 0 ? Component.empty() : 
 								Component.text(" ")
 								.append(TextYml.getText(
-									player, "in-game.crouchToSkip",
+									v, "in-game.crouchToSkip",
 									Placeholder.parsed("count", skipCount + ""),
 									Placeholder.parsed("total", getPlayerCount() + "")))))
 						.clearIfSkipped().setMuted());
+
 				})
 				.registerOnComplete(this::startCountdown)).pause().refreshOnStart();;
 	}
@@ -129,7 +130,7 @@ public class InteractionLobby extends GameLobby {
 		if (isEnabled())
 		{
 			graceCountdown.pause();
-			ToolbarMessage.clearAllFromSource(lobbyKey + "-interation");
+			messenger.clearContext("interaction");
 		}
 	}
 	

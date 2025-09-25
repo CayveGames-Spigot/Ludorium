@@ -1,6 +1,6 @@
 package me.cayve.ludorium.games.ludo;
 
-import me.cayve.ludorium.games.boards.TileMap;
+import me.cayve.ludorium.games.tilemaps.TileMap;
 
 public class LudoAnimations {
 
