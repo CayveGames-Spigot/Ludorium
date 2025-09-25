@@ -1,3 +1,0 @@
->[!faq] Features
->- Implements PlaceholderAPI
-

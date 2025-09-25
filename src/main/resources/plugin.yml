@@ -1,0 +1,14 @@
+main: me.cayve.ludorium.LudoriumPlugin
+name: Ludorium
+version: 1.0
+author: CaveBoy36
+api-version: 1.19
+description: Various tabletop games in Minecraft
+commands:
+  ludorium:
+    description: Base ludorium command
+    usage: /ludorium
+permissions:
+  ludorium.admin:
+    description: Allows all admin commands
+    default: op

@@ -1,7 +1,0 @@
-- [ ] Entities not removed when overwritten by same name
-- [ ] Solo cancel prompt has no audio
-- [x] SE facing regions don't animate properly
-- [ ] Overlap and same selection possible with different prompts
-- [ ] Starter regions should be square? and consistent among other regions (will probably cause issues if not fixed)
-- [ ] Inventories aren't guarded if an error happens mid-game
-- [ ] PlayerStateManager might cause an issue if the player has a base of less than 10 hearts (maybe other attributes too?)
