@@ -1,24 +1,21 @@
 package me.cayve.ludorium.games.events;
 
-import java.util.ArrayList;
-
 public class TokenMoveEvent extends InstanceEvent {
 
 	public enum eAction { MOVE, CAPTURE, BLUNDER }
 	
-	private String tokenID;
-	private ArrayList<Integer> tokenPath = new ArrayList<>();
-	private eAction action;
+	private final String tokenID;
+	private final Integer[] tokenPath;
+	private final eAction action;
 	
 	public TokenMoveEvent(int playerTurn, String tokenID, eAction action, int originIndex, int destinationIndex) {
 		super(playerTurn);
 		this.action = action;
 		this.tokenID = tokenID;
-		tokenPath.add(originIndex);
-		tokenPath.add(destinationIndex);
+		this.tokenPath = new Integer[] { originIndex, destinationIndex };
 	}
 	
-	public TokenMoveEvent(int playerTurn, String tokenID, eAction action, ArrayList<Integer> path) {
+	public TokenMoveEvent(int playerTurn, String tokenID, eAction action, Integer[] path) {
 		super(playerTurn);
 		this.action = action;
 		this.tokenID = tokenID;
@@ -26,8 +23,8 @@ public class TokenMoveEvent extends InstanceEvent {
 	}
 	
 	public String getTokenID() { return tokenID; }
-	public int getOriginIndex() { return tokenPath.getFirst(); }
-	public int getDestinationIndex() { return tokenPath.getLast(); }
-	public ArrayList<Integer> getPath() { return tokenPath; }
+	public int getOriginIndex() { return tokenPath[0]; }
+	public int getDestinationIndex() { return tokenPath[tokenPath.length - 1]; }
+	public Integer[] getPath() { return tokenPath; }
 	public eAction getAction() { return action; }
 }

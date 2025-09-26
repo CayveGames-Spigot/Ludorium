@@ -3,6 +3,7 @@ package me.cayve.ludorium.games.ludo;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.bukkit.Location;
 import org.bukkit.util.Vector;
 import org.joml.Vector3f;
@@ -25,20 +26,21 @@ import me.cayve.ludorium.utils.locational.Region;
  */
 public class LudoMap {
 
-	private static final int 	HOME_TILE_COUNT = 4,
+	public static final int HOME_TILE_COUNT = 4,
 						STARTER_TILE_COUNT = 4;
 	private static final Vector3f TOKEN_OFFSET = new Vector3f(0.5f, 1, 0.5f);
 	
 	private String mapID;
 
 	private Vector[] relativeLocations;
-	private ArrayList<Integer> safeSpaceIndexes = new ArrayList<>();
+	private Integer[] safeSpaceIndexes;
 	
 	private int tileCount;
 	private int colorCount;
 	
-	public LudoMap(Vector[] relativeMap, String mapID, int tileCount, boolean isSixPlayers) {
+	public LudoMap(Vector[] relativeMap, Integer[] safeSpaceIndexes, String mapID, int tileCount, boolean isSixPlayers) {
 		this.relativeLocations = relativeMap;
+		this.safeSpaceIndexes = safeSpaceIndexes;
 		this.mapID = mapID;
 		
 		this.tileCount = tileCount;
@@ -81,25 +83,27 @@ public class LudoMap {
 					LocationUtil.relativeLocation(center, -length, 0, -length));
 		}
 		
+		ArrayList<Integer> safeSpaceIndexes = new ArrayList<>();
 		//Determines relative location for all safe spaces
 		for (int i = 0; i < safeSpaces.size(); i++) {
 			Vector safeSpace = calculateRelativity(origin, safeSpaces.get(i));
 			
 			for (int j = 0; j < getMapSize(); j++)
 				if (relativeLocations[j].equals(safeSpace))
-					this.safeSpaceIndexes.add(j);
+					safeSpaceIndexes.add(j);
 		}
+		this.safeSpaceIndexes = safeSpaceIndexes.toArray(new Integer[0]);
 
 	}
 	
 	public String getMapID() { return mapID; }
 	
 	public int getHomeIndex(int color, int index) {
-		return getTileIndex(tileCount) + (color * HOME_TILE_COUNT) + index;
+		return tileCount + (color * HOME_TILE_COUNT) + index;
 	}
 	
 	public int getTileIndex(int index) {
-		return index;
+		return index % tileCount;
 	}
 	
 	public int getStarterIndex(int color, int index) {
@@ -126,17 +130,18 @@ public class LudoMap {
 	}
 	
 	public boolean isSafeSpace(int index) {
-		return safeSpaceIndexes.contains(index);
+		return ArrayUtils.contains(safeSpaceIndexes, index);
 	}
 	
 	public boolean isSixPlayers() { return colorCount == 6; }
 	public int getTileCount() { return tileCount; }
 	public Vector[] getRelativeLocations() { return relativeLocations; }
+	public Integer[] getSafeSpaceIndexes() { return safeSpaceIndexes; }
 	public int getColorCount() { return colorCount; }
 	public int getMapSize() { return relativeLocations.length; }
 	
 	public int getStartTile(int colorIndex) { return (tileCount / getColorCount()) * colorIndex; }
-	public int getEndTile(int colorIndex) { return Math.floorMod(getStartTile(colorIndex) - 1, tileCount); }
+	public int getEndTile(int colorIndex) { return Math.floorMod(getStartTile(colorIndex) - 1 + tileCount, tileCount); }
 	
 	/**
 	 * 

@@ -11,6 +11,9 @@ public class ArrayListUtils {
 		return find(list, predicate) != null;
 	}
 	
+	public static <T> T findOfType(ArrayList<?> list, Class<T> type) {
+		return type.cast(find(list, x -> x.getClass().isAssignableFrom(type)));
+	}
 	public static <T> T find(ArrayList<T> list, Predicate<T> predicate) {
 		Iterator<T> iterator = list.iterator();
 		while (iterator.hasNext())

@@ -262,7 +262,7 @@ public class LudoBoard extends GameBoard {
 		initializeGameInstance();
 		initializeTileMaps(origin);
 		
-		gameInstance.start();
+		gameInstance.start(true);
 	}
 
 	@Override

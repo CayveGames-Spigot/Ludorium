@@ -64,7 +64,6 @@ public class LudoInstance extends GameInstance {
 		
 		//Sorts the indexes so the turn order goes the same direction
 		this.activePlayerIndexes = activePlayerIndexes;
-		Collections.sort(this.activePlayerIndexes);
 
 		//Fills in the active starting pieces
 		for (int i = 0; i < this.activePlayerIndexes.size(); i++) {
@@ -74,9 +73,12 @@ public class LudoInstance extends GameInstance {
 		}
 	}
 	
-	public void start() {
+	public void start(boolean randomizeStartTurn) {
+		if (randomizeStartTurn)
+			Collections.sort(this.activePlayerIndexes);
 		if (currentTurn == -1)
-			nextTurn(activePlayerIndexes.get(new Random().nextInt(activePlayerIndexes.size())), LudoTurnDefinition.TURN_ENDED);
+			nextTurn(randomizeStartTurn ? activePlayerIndexes.get(
+					new Random().nextInt(activePlayerIndexes.size())) : 0, LudoTurnDefinition.TURN_ENDED);
 	}
 	
 	public void roll(int rollValue) {
@@ -167,12 +169,11 @@ public class LudoInstance extends GameInstance {
 			int targetIndex = getPieceTarget(pieceID, false);
 
 			//Verify the move is possible and that if its a capture, its not their own piece
-			if (targetIndex == -1 || (!board[targetIndex].isEmpty() && doesPieceMatchCurrentPlayer(pieceID)))
+			if (targetIndex == -1 || (!board[targetIndex].isEmpty() && doesPieceMatchCurrentPlayer(board[targetIndex])))
 				return;
 		}
 		
 		selectedPiece = pieceID;
-		
 		if (selectedPiece == null)
 			logger.logEvent(new TokenSelectionEvent(getCurrentPlayerIndex(), new String[0], new Integer[0]));
 		else
@@ -240,7 +241,7 @@ public class LudoInstance extends GameInstance {
 		ArrayList<Integer> path = new ArrayList<>();
 		
 		//First, check if piece is still at start
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < LudoMap.STARTER_TILE_COUNT; i++) {
 			int boardIndex = map.getStarterIndex(getCurrentPlayerIndex(), i);
 			if (!board[boardIndex].equals(pieceID))
 				continue;
@@ -253,43 +254,60 @@ public class LudoInstance extends GameInstance {
 		}
 		
 		//Second, check if piece is in home
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < LudoMap.HOME_TILE_COUNT; i++)
 		{
 			int boardIndex = map.getHomeIndex(getCurrentPlayerIndex(), i);
 			
-			if (board[boardIndex].equals(pieceID)) {
-
+			if (board[boardIndex].equals(pieceID))
 				return moveDownHomeStretch(i, currentRoll, pieceID, movePiece, path);
-			}
 		}
 		
 		//Otherwise, piece is on main board
-		for (int i = 0; i < board.length; i++) {
+		for (int i = 0; i < map.getTileCount(); i++) {
 			int boardIndex = map.getTileIndex(i);
 			
 			if (!board[boardIndex].equals(pieceID))
 				continue;
 			
+			/**
+			 * Check if piece needs to go to home stretch
+			 */
 			int endTileIndex = map.getEndTile(getCurrentPlayerIndex());
+			
+			int homeStretchMoveAmount = -1;
+			//If the piece is below the home stretch (indicates its after the wrap)
 			if (boardIndex <= endTileIndex && boardIndex + currentRoll > endTileIndex)
+				homeStretchMoveAmount = boardIndex + currentRoll - endTileIndex;
+			
+			//If the piece is above the home stretch and the roll will go past the wrap (indicates its before the wrap)
+			if (boardIndex > endTileIndex && boardIndex + currentRoll > map.getTileCount() 
+					&& map.getTileIndex(boardIndex + currentRoll) > endTileIndex)
+				homeStretchMoveAmount = map.getTileIndex(boardIndex + currentRoll) - endTileIndex;
+				
+			//If the piece should move down the home stretch instead of continuing on the board
+			if (homeStretchMoveAmount != -1)
 			{
-				populatePath(path, boardIndex, boardIndex - endTileIndex);
-				return moveDownHomeStretch(-1, currentRoll - (boardIndex - endTileIndex), pieceID, movePiece, path);
+				populatePath(path, boardIndex, currentRoll - homeStretchMoveAmount, true);
+				return moveDownHomeStretch(-1, homeStretchMoveAmount, pieceID, movePiece, path);
 			}
 			
-			populatePath(path, boardIndex, currentRoll - 1); //- 1 because moveToBoardTile handles last position
+			/**
+			 * Moves from tile to tile
+			 */
+			populatePath(path, boardIndex, currentRoll - 1, true); //- 1 because moveToBoardTile handles last position
 			return moveToBoardTile(boardIndex + currentRoll, pieceID, movePiece, path);
 		}
 		
 		return -1;
 	}
 	
-	private void populatePath(ArrayList<Integer> path, int start, int count) {
+	private void populatePath(ArrayList<Integer> path, int start, int count, boolean wrap) {
 		for (int i = start; i <= start + count; i++)
-			path.add(i);
+			path.add(wrap ? map.getTileIndex(i) : i);
 	}
 	
 	private int moveToBoardTile(int tileIndex, String pieceID, boolean movePiece, ArrayList<Integer> path) {
+		tileIndex = map.getTileIndex(tileIndex);
 		if (!board[tileIndex].isEmpty() && doesPieceMatchCurrentPlayer(board[tileIndex]))
 			return -1;
 		
@@ -303,7 +321,7 @@ public class LudoInstance extends GameInstance {
 			returnPieceToStart(board[tileIndex], eAction.CAPTURE);
 		
 		path.add(tileIndex);
-		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
+		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path.toArray(new Integer[0])));
 		
 		removePiece(pieceID);
 		board[tileIndex] = pieceID;
@@ -329,8 +347,8 @@ public class LudoInstance extends GameInstance {
 					if (!movePiece)
 						return tempIndex;
 					
-					populatePath(path, tempIndex - j, j);
-					logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
+					populatePath(path, tempIndex - j, j, false);
+					logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path.toArray(new Integer[0])));
 					
 					completedPieces.add(pieceID);
 					removePiece(pieceID);
@@ -350,8 +368,8 @@ public class LudoInstance extends GameInstance {
 		if (!movePiece)
 			return homeIndex;
 		
-		populatePath(path, startingPos - moveAmount, moveAmount);
-		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path));
+		populatePath(path, map.getHomeIndex(getCurrentPlayerIndex(), startingPos + 1), moveAmount - 1, false);
+		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path.toArray(new Integer[0])));
 		
 		removePiece(pieceID);
 		board[homeIndex] = pieceID;
@@ -363,9 +381,6 @@ public class LudoInstance extends GameInstance {
 	 * This does not place the piece at a new location.
 	 * The search uses startsWith logic, so player indexes can be used to 
 	 * replace ALL of a player's pieces. (Since pieceIDs start with player index)
-	 * @param pieceID The piece to replace
-	 * @param replaceWith The piece to replace with (null to empty the tile)
-	 * @return the index the piece was at
 	 */
 	private void removePiece(String pieceID) {
 		for (int i = 0; i < board.length; i++)
@@ -382,26 +397,22 @@ public class LudoInstance extends GameInstance {
 		removePiece(pieceID);
 		
 		int playerIndex = getPlayerIndexFromPiece(pieceID);
-		for (int i = 0; i < 4; i++) {
-			if (board[map.getStarterIndex(playerIndex, i)].isEmpty()) {
-				int starterIndex = map.getStarterIndex(playerIndex, i);
-				board[starterIndex] = pieceID;
-				
-				logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, action, pieceIndex, starterIndex));
-				return;
-			}
-		}
+		
+		int starterIndex = map.getStarterIndex(playerIndex, getPieceNumberFromPiece(pieceID));
+		board[starterIndex] = pieceID;
+		
+		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, action, pieceIndex, starterIndex));
 	}
 	
 	private void nextTurn(int jumpToTurn, int reason) {
 		int previousTurn = getCurrentPlayerIndex();
 		
 		if (jumpToTurn != -1)
-			currentTurn = jumpToTurn;
+			currentTurn = (jumpToTurn + activePlayerIndexes.size()) % activePlayerIndexes.size();
 		else
 			currentTurn = (currentTurn + 1) % activePlayerIndexes.size();
 		
-		if (previousTurn != currentTurn)
+		if (previousTurn != getCurrentPlayerIndex())
 			graceTurnsLeft = noMovesGraceAllowance;
 		currentRoll = -1;
 		

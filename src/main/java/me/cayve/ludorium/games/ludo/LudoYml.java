@@ -48,6 +48,7 @@ public class LudoYml {
 			yml.customConfig.set("maps." + map.getMapID() + ".tileCount", map.getTileCount());
 			yml.customConfig.set("maps." + map.getMapID() + ".isSixPlayers", map.isSixPlayers());
 			
+			yml.customConfig.set("maps." + map.getMapID() + ".safeSpaceIndexes", Arrays.asList(map.getSafeSpaceIndexes()));
 			yml.customConfig.set("maps." + map.getMapID() + ".relativeLocations", Arrays.asList(map.getRelativeLocations()));
 		}
 	}
@@ -78,8 +79,13 @@ public class LudoYml {
 			List<Vector3f> relativeLocations = (List<Vector3f>) 
 					yml.customConfig.getList("maps." + map + ".relativeLocations");
 			
+			@SuppressWarnings("unchecked")
+			List<Integer> safeSpaceIndexes = (List<Integer>)
+					yml.customConfig.getList("maps." + map + ".safeSpaceIndexes");
+			
 			loadedMaps.put(map, new LudoMap(
-					relativeLocations.toArray(new Vector[0]), map, tileCount, isSixPlayers));
+					relativeLocations.toArray(new Vector[0]), 
+					safeSpaceIndexes.toArray(new Integer[0]), map, tileCount, isSixPlayers));
 		}
 
 		BoardList.add(new LudoBoard(key, loadedMaps.get(map), origin));

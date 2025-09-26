@@ -2,12 +2,11 @@ package me.cayve.ludorium.games.events;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
 
-import me.cayve.ludorium.utils.events.Event1;
 import me.cayve.ludorium.utils.events.Event.Subscriber;
+import me.cayve.ludorium.utils.events.Event1;
 
 public class InstanceEventLog {
 	
@@ -25,15 +24,13 @@ public class InstanceEventLog {
 	
 	@SuppressWarnings("unchecked")
 	private void dispatchUnprocessed() {
-		Iterator<InstanceEvent> iterator = unprocessed.iterator();
-		while (iterator.hasNext()) {
-			InstanceEvent next = iterator.next();
+		for (InstanceEvent event : unprocessed) {
+			if (events.containsKey(event.getClass()))
+				((Event1<InstanceEvent>)events.get(event.getClass())).accept(event);
 			
-			((Event1<InstanceEvent>)events.get(next.getClass())).accept(next);
-			
-			processed.add(next);
-			iterator.remove();
+			processed.add(event);
 		}
+		unprocessed.clear();
 	}
 	
 	@SuppressWarnings("unchecked")

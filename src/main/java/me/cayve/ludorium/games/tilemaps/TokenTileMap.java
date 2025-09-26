@@ -29,7 +29,7 @@ public class TokenTileMap extends TileMap {
 
 	private class TokenMovement  {
 		private String tokenID;
-		private ArrayList<Integer> path;
+		private Integer[] path;
 		
 		private Runnable startCallback, endCallback;
 	}
@@ -146,7 +146,7 @@ public class TokenTileMap extends TileMap {
 	 * @param startCallback Called when the token begins to move
 	 * @param endCallback Called when the token finishes moving
 	 */
-	public void moveToken(String tokenID, ArrayList<Integer> path, boolean queueMovement, Runnable startCallback, Runnable endCallback) {
+	public void moveToken(String tokenID, Integer[] path, boolean queueMovement, Runnable startCallback, Runnable endCallback) {
 		TokenMovement newMovement = new TokenMovement();
 		
 		newMovement.tokenID = tokenID;
@@ -168,12 +168,12 @@ public class TokenTileMap extends TileMap {
 	private void startMovement(TokenMovement movement) {
 		ItemEntity token = ArrayUtils.find(displayEntities, x -> x.getID().equals(movement.tokenID));
 
-		Runnable[] jumpCallbacks = new Runnable[movement.path.size()];
+		Runnable[] jumpCallbacks = new Runnable[movement.path.length];
 
-		jumpCallbacks[movement.path.size() - 1] = this::endMovement;
+		jumpCallbacks[movement.path.length - 1] = this::endMovement;
 		
 		token.getComponent(Animator.class).play(new PathingAnimationRig(
-				ArrayUtils.map(movement.path.toArray(new Integer[0]), Location.class, (i) -> tileLocations[i]), jumpCallbacks, .5f, 1));
+				ArrayUtils.map(movement.path, Location.class, (i) -> tileLocations[i]), jumpCallbacks, .5f, 1));
 
 		if (movement.startCallback != null)
 			movement.startCallback.run();
