@@ -27,6 +27,8 @@ import me.cayve.ludorium.utils.particles.ParticleStroke;
 
 public class TokenTileMap extends TileMap {
 
+	public static final float TOKEN_ANIM_JUMP_DURATION = 0.5f;
+	
 	private class TokenMovement  {
 		private String tokenID;
 		private Integer[] path;
@@ -173,7 +175,8 @@ public class TokenTileMap extends TileMap {
 		jumpCallbacks[movement.path.length - 1] = this::endMovement;
 		
 		token.getComponent(Animator.class).play(new PathingAnimationRig(
-				ArrayUtils.map(movement.path, Location.class, (i) -> tileLocations[i]), jumpCallbacks, .5f, 1));
+				ArrayUtils.map(movement.path, Location.class, (i) -> tileLocations[i]), 
+				jumpCallbacks, TOKEN_ANIM_JUMP_DURATION, 1));
 
 		if (movement.startCallback != null)
 			movement.startCallback.run();

@@ -199,20 +199,22 @@ public class LudoBoard extends GameBoard {
 	}
 	
 	private void onTokenMove(TokenMoveEvent event) {
-		((TokenTileMap) tileMaps.getMap(1)).moveToken(event.getTokenID(), event.getPath(), true, null, null);
-		
-		if (event.getAction() == eAction.BLUNDER)
-			lobby.getMessenger().sendAll(ToolbarMessage::sendImmediate, 
-				new Message(v -> TextYml.getText(v, "in-game.ludo.blundered", 
-					Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v)))));
-		if (event.getAction() == eAction.CAPTURE)
-			lobby.getMessenger().sendAll(ToolbarMessage::sendImmediate, 
-				new Message(v -> TextYml.getText(v, "in-game.ludo.captured", 
-					Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v)),
-					Placeholder.component("oponent-label", 
-						getPositionLabel(gameInstance.getPlayerIndexFromPiece(event.getTokenID()), v)))));
-		
-		((TokenTileMap) tileMaps.getMap(1)).setState(gameInstance.getBoardState(), false);
+		actionQueue.queue(event.getPath().length * TokenTileMap.TOKEN_ANIM_JUMP_DURATION, () -> {
+			((TokenTileMap) tileMaps.getMap(1)).moveToken(event.getTokenID(), event.getPath(), true, null, null);
+			
+			if (event.getAction() == eAction.BLUNDER)
+				lobby.getMessenger().sendAll(ToolbarMessage::sendImmediate, 
+					new Message(v -> TextYml.getText(v, "in-game.ludo.blundered", 
+						Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v)))));
+			if (event.getAction() == eAction.CAPTURE)
+				lobby.getMessenger().sendAll(ToolbarMessage::sendImmediate, 
+					new Message(v -> TextYml.getText(v, "in-game.ludo.captured", 
+						Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v)),
+						Placeholder.component("oponent-label", 
+							getPositionLabel(gameInstance.getPlayerIndexFromPiece(event.getTokenID()), v)))));
+			
+			((TokenTileMap) tileMaps.getMap(1)).setState(gameInstance.getBoardState(), false);
+		});
 	}
 	
 	private void onGameEnd(GameFinishEvent event) {

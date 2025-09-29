@@ -25,6 +25,7 @@ public abstract class Event<T> {
 	}
 	
 	public static class Subscriber<U> {
+		private boolean isCanceled = false;
 		private CopyOnWriteArrayList<EventListener<U>> listeners = new CopyOnWriteArrayList<>();
 		
 		public Subscription subscribe(U listener) { return subscribe(listener, false, 0); }
@@ -45,6 +46,8 @@ public abstract class Event<T> {
 				if (l.listener == listener)
 					listeners.remove(l);
 		}
+		
+		public void setCanceled(boolean canceled) { isCanceled = canceled; }
 	}
 	
 	private Subscriber<T> subscriber = new Subscriber<>();
@@ -57,9 +60,12 @@ public abstract class Event<T> {
 	public void unsubscribe(T listener) { subscriber.unsubscribe(listener); }
 	
 	public Subscriber<T> getSubscriber() { return subscriber; }
-
+	
 	protected void invoke(Consumer<T> invocationMethod) {
+		subscriber.isCanceled = false;
 		for (EventListener<T> listener : subscriber.listeners) {
+			if (subscriber.isCanceled) continue;
+			
 			if (listener.isOneShot && !listener.hasRun.compareAndSet(false, true)) continue;
 			
 			invocationMethod.accept(listener.listener);

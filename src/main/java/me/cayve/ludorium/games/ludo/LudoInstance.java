@@ -368,7 +368,10 @@ public class LudoInstance extends GameInstance {
 		if (!movePiece)
 			return homeIndex;
 		
-		populatePath(path, map.getHomeIndex(getCurrentPlayerIndex(), startingPos + 1), moveAmount - 1, false);
+		//Since starting pos can be -1, adjust the path calculation to account for it
+		int adjustOffBoard = startingPos == -1 ? 1 : 0;
+		populatePath(path, map.getHomeIndex(getCurrentPlayerIndex(), startingPos + adjustOffBoard), 
+				moveAmount - adjustOffBoard, false);
 		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path.toArray(new Integer[0])));
 		
 		removePiece(pieceID);

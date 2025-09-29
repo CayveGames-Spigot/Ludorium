@@ -286,6 +286,70 @@ public class LudoInstanceTest {
 	}
 	
 	/**
+	 * Tests the pathing for a piece going from the home tile to the next home tile
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 0, 1, 2, 3 })
+	void testSolo_PathingHomeToNext(int color) {
+		LudoMap map = createDefaultMap();
+		LudoInstance instance = new LudoInstance(createParty(color), map, false, false, false, 2, false);
+		instance.start(false);
+
+		applyMoves(instance, 
+				new int[] { 6, 6, 2, 1 }, 
+				new String[] { 
+						piece(color,0), piece(color,0), piece(color,0), piece(color,0) }, 
+				new int[] { 
+						map.getTileIndex(map.getStartTile(color)), 
+						map.getTileIndex(map.getStartTile(color) + 6), 
+						map.getHomeIndex(color, 0), 
+						map.getHomeIndex(color, 1)});
+		
+		Integer[] expected = new Integer[] {
+				map.getHomeIndex(color, 0),
+				map.getHomeIndex(color, 1)};
+		
+		TokenMoveEvent lastEvent = null;
+		for (InstanceEvent event : instance.getLogger().getFullLog()) {
+			if (event instanceof TokenMoveEvent tokenMove)
+				lastEvent = tokenMove;
+				
+		}
+		assertArrayEquals(expected, lastEvent.getPath(), "Actual path: " + Arrays.toString(lastEvent.getPath()));
+	}
+	
+	/**
+	 * Tests the pathing for a piece going from tile to the next tile
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 0, 1, 2, 3 })
+	void testSolo_PathingTileToNext(int color) {
+		LudoMap map = createDefaultMap();
+		LudoInstance instance = new LudoInstance(createParty(color), map, false, false, false, 2, false);
+		instance.start(false);
+
+		applyMoves(instance, 
+				new int[] { 6, 1 }, 
+				new String[] { 
+						piece(color,0), piece(color,0) }, 
+				new int[] { 
+						map.getTileIndex(map.getStartTile(color)), 
+						map.getTileIndex(map.getStartTile(color) + 1)});
+		
+		Integer[] expected = new Integer[] {
+				map.getTileIndex(map.getStartTile(color)), 
+				map.getTileIndex(map.getStartTile(color) + 1)};
+		
+		TokenMoveEvent lastEvent = null;
+		for (InstanceEvent event : instance.getLogger().getFullLog()) {
+			if (event instanceof TokenMoveEvent tokenMove)
+				lastEvent = tokenMove;
+				
+		}
+		assertArrayEquals(expected, lastEvent.getPath(), "Actual path: " + Arrays.toString(lastEvent.getPath()));
+	}
+	
+	/**
 	 * Tests the pathing for a piece going from the board tile to a home tile
 	 */
 	@ParameterizedTest
