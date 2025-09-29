@@ -166,7 +166,7 @@ public class LudoBoard extends GameBoard {
 			});
 		
 		//Action duration of 0 because it waits on the dice roll
-		actionQueue.queue(0, () -> {
+		actionQueue.queue(() -> {
 			rollTimer.restart();
 			
 			lobby.getMessenger().sendAll(ToolbarMessage::clearSourceAndSendImmediate,
@@ -199,9 +199,11 @@ public class LudoBoard extends GameBoard {
 	}
 	
 	private void onTokenMove(TokenMoveEvent event) {
-		actionQueue.queue(event.getPath().length * TokenTileMap.TOKEN_ANIM_JUMP_DURATION, () -> {
-			((TokenTileMap) tileMaps.getMap(1)).moveToken(event.getTokenID(), event.getPath(), true, null, null);
-			
+		((TokenTileMap) tileMaps.getMap(1)).moveToken(event.getTokenID(), event.getPath(), true, null, null);
+		
+		((TokenTileMap) tileMaps.getMap(1)).setState(gameInstance.getBoardState(), false);
+		
+		actionQueue.queue(MIN_DICE_ROLL_DURATION, () -> {
 			if (event.getAction() == eAction.BLUNDER)
 				lobby.getMessenger().sendAll(ToolbarMessage::sendImmediate, 
 					new Message(v -> TextYml.getText(v, "in-game.ludo.blundered", 
@@ -210,20 +212,20 @@ public class LudoBoard extends GameBoard {
 				lobby.getMessenger().sendAll(ToolbarMessage::sendImmediate, 
 					new Message(v -> TextYml.getText(v, "in-game.ludo.captured", 
 						Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v)),
-						Placeholder.component("oponent-label", 
+						Placeholder.component("opponent-label", 
 							getPositionLabel(gameInstance.getPlayerIndexFromPiece(event.getTokenID()), v)))));
-			
-			((TokenTileMap) tileMaps.getMap(1)).setState(gameInstance.getBoardState(), false);
 		});
 	}
 	
 	private void onGameEnd(GameFinishEvent event) {
-		endGameTimer.restart();
-		
-		lobby.getMessenger().sendAll(ToolbarMessage::clearSourceAndSendImmediate, 
-				new Message(v -> TextYml.getText(v, "in-game.ludo.won", 
-						Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v))))
-			.linkDurationToTimer(endGameTimer).showDuration(.5f));
+		actionQueue.queue(() -> {
+			endGameTimer.restart();
+			
+			lobby.getMessenger().sendAll(ToolbarMessage::clearSourceAndSendImmediate, 
+					new Message(v -> TextYml.getText(v, "in-game.ludo.won", 
+							Placeholder.component("label", getPositionLabel(event.getPlayerTurn(), v))))
+				.linkDurationToTimer(endGameTimer).showDuration(.5f));
+		});
 	}
 
 	private void onNewChoice(ActionChoiceEvent<String> event) {

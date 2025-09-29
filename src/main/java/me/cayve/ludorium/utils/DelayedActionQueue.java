@@ -18,6 +18,12 @@ public class DelayedActionQueue {
 			onComplete();
 	}
 	
+	/**
+	 * Queue an action with a duration of 0
+	 * @param action
+	 */
+	public void queue(Runnable action) { queue(0, action); }
+	
 	private void onComplete() {
 		if (queue.isEmpty())
 			return;

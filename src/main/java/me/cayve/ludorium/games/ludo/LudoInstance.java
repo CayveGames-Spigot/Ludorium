@@ -102,10 +102,10 @@ public class LudoInstance extends GameInstance {
 		if (graceTurnsLeft <= 0)
 			return false;
 		
-		if (noMovesGracePostStart) {
+		if (!noMovesGracePostStart) {
 			//If all the player's pieces are not in the starter, disallow
 			for (int i = 0; i < 4; i++)
-				if (board[map.getStarterIndex(getCurrentPlayerIndex(), i)].equals(""))
+				if (board[map.getStarterIndex(getCurrentPlayerIndex(), i)].isEmpty())
 					return false;
 		}
 		
@@ -134,13 +134,14 @@ public class LudoInstance extends GameInstance {
 		if (forceCapture && board[targetIndex].isEmpty())
 			checkForceCapture(selectedPiece);
 		
-		checkForWinner();
-		
 		selectedPiece = null;
+		
 		//Log that there's no more token selected
 		logger.logEvent(new TokenSelectionEvent(getCurrentPlayerIndex(), new String[0], new Integer[0]));
 		//Log that there's no more actions available
 		logger.logEvent(new ActionChoiceEvent<String>(getCurrentPlayerIndex(), new String[0]));
+		
+		checkForWinner();
 		
 		if (winnerPlayerIndex == -1)
 		{
@@ -319,11 +320,12 @@ public class LudoInstance extends GameInstance {
 		if (!movePiece)
 			return tileIndex;
 		
-		if (!board[tileIndex].isEmpty())
-			returnPieceToStart(board[tileIndex], eAction.CAPTURE);
-		
 		path.add(tileIndex);
 		logger.logEvent(new TokenMoveEvent(getCurrentPlayerIndex(), pieceID, eAction.MOVE, path.toArray(new Integer[0])));
+		
+		//Remove the piece after logging to maintain the order or operations
+		if (!board[tileIndex].isEmpty())
+			returnPieceToStart(board[tileIndex], eAction.CAPTURE);
 		
 		removePiece(pieceID);
 		board[tileIndex] = pieceID;

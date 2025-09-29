@@ -16,12 +16,14 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 
+import io.papermc.paper.event.player.AsyncChatEvent;
 import me.cayve.ludorium.LudoriumPlugin;
 import me.cayve.ludorium.games.utils.PlayerInventoryManager.InventoryState;
 import me.cayve.ludorium.utils.Collider;
 import me.cayve.ludorium.utils.Rigidbody;
 import me.cayve.ludorium.utils.SourceKey;
 import me.cayve.ludorium.utils.entities.ItemEntity;
+import net.kyori.adventure.text.TextComponent;
 
 /**
  * @author Cayve
@@ -44,6 +46,8 @@ public class GameDie implements Listener {
 	private Consumer<Integer[]> rollCallback;
 	
 	private ArrayList<ItemEntity> activeRolls = new ArrayList<>();
+	
+	private int devForceNextRoll = -1;
 	
 	public GameDie(SourceKey gameKey, int diceCount) {
 		this.gameKey = gameKey;
@@ -119,7 +123,9 @@ public class GameDie implements Listener {
 		Integer[] results = new Integer[currentDiceCount];
 		
 		for (int i = 0; i < currentDiceCount; i++)
-			results[i] = new Random().nextInt(6) + 1;
+			results[i] = devForceNextRoll != -1 ? devForceNextRoll : new Random().nextInt(6) + 1;
+		
+		devForceNextRoll = -1;
 		
 		//Reset the current roll and submit the results
 		removeItemFromPlayer();
@@ -139,6 +145,20 @@ public class GameDie implements Listener {
 		
 		dropDice(event.getItemDrop());
 		event.setCancelled(false); //Override lower priorities
+	}
+	
+	@EventHandler
+	private void onPlayerChat(AsyncChatEvent event) {
+		if (!LudoriumPlugin.isDeveloperMode())
+			return;
+		
+		if (event.getPlayer().getUniqueId().toString().equals(currentPlayer))
+		{
+			try {
+			devForceNextRoll = Integer.parseInt(((TextComponent)event.originalMessage()).content());
+			event.setCancelled(true);
+			} catch (NumberFormatException exception) {}
+		}
 	}
 	
 	private void dropDice(Item item) {

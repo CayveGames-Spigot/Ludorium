@@ -273,16 +273,13 @@ public class LudoInstanceTest {
 				map.getStarterIndex(color, 0) 
 		};
 		
-		TokenMoveEvent lastEvent = null, secondToLast = null;
+		TokenMoveEvent lastEvent = null;
 		for (InstanceEvent event : instance.getLogger().getFullLog()) {
 			if (event instanceof TokenMoveEvent tokenMove)
-			{
-				secondToLast = lastEvent;
-				lastEvent = tokenMove;
-			}		
+				lastEvent = tokenMove;		
 		}
 		
-		assertArrayEquals(expected, secondToLast.getPath(), "Actual path: " + Arrays.toString(secondToLast.getPath()));
+		assertArrayEquals(expected, lastEvent.getPath(), "Actual path: " + Arrays.toString(lastEvent.getPath()));
 	}
 	
 	/**
