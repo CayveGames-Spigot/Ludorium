@@ -157,10 +157,11 @@ public class LudoInstance extends GameInstance {
 	 * Necessary before selectTile() call, and will verify the current player turn according to the piece ID
 	 * (though not that the player who selected IS that turn)
 	 * @param pieceID
+	 * @return Whether the piece interaction was registered
 	 */
-	public void selectPiece(String pieceID) {
+	public boolean selectPiece(String pieceID) {
 		if (currentRoll == -1 || !doesPieceMatchCurrentPlayer(pieceID))
-			return;
+			return false;
 		
 		if (selectedPiece != null && selectedPiece.equals(pieceID))
 			pieceID = null;
@@ -170,7 +171,7 @@ public class LudoInstance extends GameInstance {
 
 			//Verify the move is possible and that if its a capture, its not their own piece
 			if (targetIndex == -1 || (!board[targetIndex].isEmpty() && doesPieceMatchCurrentPlayer(board[targetIndex])))
-				return;
+				return false;
 		}
 		
 		selectedPiece = pieceID;
@@ -182,6 +183,7 @@ public class LudoInstance extends GameInstance {
 					new Integer[] { getPieceTarget(selectedPiece, false) }));
 		
 		dispatchEvents();
+		return true;
 	}
 	
 	/**

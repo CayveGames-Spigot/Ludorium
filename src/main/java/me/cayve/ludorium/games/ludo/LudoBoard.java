@@ -99,7 +99,7 @@ public class LudoBoard extends GameBoard {
 	}
 	
 	private void initializeGameInstance() {
-		gameInstance = new LudoInstance(lobby.getOccupiedPositions(), boardMap, false, false, false, 2, false);
+		gameInstance = new LudoInstance(lobby.getOccupiedPositions(), boardMap, false, true, false, 2, false);
 		
 		gameInstance.getLogger().getSubscriber(TurnChangeEvent.class).subscribe(this::onNextTurn);
 		gameInstance.getLogger().getSubscriber(DiceRollEvent.class).subscribe(this::onDiceRoll);
@@ -252,10 +252,10 @@ public class LudoBoard extends GameBoard {
 	private void onTileSelected(int tileIndex) {
 		String selectedPiece = tileMaps.getMap(1).getTileIDAt(tileIndex);
 
-		if (selectedPiece != null)
-			gameInstance.selectPiece(selectedPiece);
-		else
-			gameInstance.selectTile(tileIndex);
+		if (selectedPiece != null && gameInstance.selectPiece(selectedPiece))
+			return;
+		
+		gameInstance.selectTile(tileIndex);
 	}
 
 	@Override

@@ -666,6 +666,36 @@ public class LudoInstanceTest {
 	}
 	
 	/**
+	 * Tests if a piece can be moved from the starter all the way to the home stretch
+	 */
+	@ParameterizedTest
+	@ValueSource(ints = { 0, 1, 2, 3 })
+	void testSolo_F666(int color) {
+		LudoMap map = createDefaultMap();
+		LudoInstance instance = new LudoInstance(createParty(color), map, false, false, false, 2, false);
+		instance.start(false);
+
+		applyMoves(instance, 
+				new int[] { 6, 6, 1, 6 }, 
+				new String[] { piece(color,0), piece(color,0), piece(color,0), piece(color,0) }, 
+				new int[] { 
+						map.getTileIndex(map.getStartTile(color)), 
+						map.getTileIndex(map.getStartTile(color) + 6),
+						map.getTileIndex(map.getStartTile(color) + 7),
+						map.getHomeIndex(color, 5) });
+		
+		String[] expected = new String[map.getMapSize()];
+		Arrays.fill(expected, "");
+		expected[map.getStarterIndex(color, 1)] = piece(color,1);
+		expected[map.getStarterIndex(color, 2)] = piece(color,2);
+		expected[map.getStarterIndex(color, 3)] = piece(color,3);
+		
+		expected[map.getTileIndex(map.getStartTile(color) + 7)] = piece(color,0);
+		
+		assertArrayEquals(expected, instance.getBoardState(), "Actual piece location: " + instance.getPieceIndex(piece(color,0)));
+	}
+	
+	/**
 	 * Tests if a piece can be moved from the starter all the way to the home stretch, using a different combination
 	 */
 	@ParameterizedTest
